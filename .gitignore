@@ -1,0 +1,4 @@
+# Local preview captures and unused source posters
+screenshots/
+assets/originals/
+.DS_Store

@@ -1,0 +1,6 @@
+# Private party invite. Search engines should not index this site.
+User-agent: *
+Disallow: /
+
+# Sitemap exists but crawling is disallowed.
+# Sitemap: https://jackkerhere.github.io/ugly-tee-xmas/sitemap.xml
