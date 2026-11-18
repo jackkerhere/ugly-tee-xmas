@@ -435,9 +435,10 @@
       html += "<p class='lede'>Potluck dishes will show up here as guests add them on their page. Soft drinks, mixers and ice are on us to organise — specifics still to come. Jack covers alcohol.</p></div>";
 
       const labels = { Main: "Mains", Side: "Sides", Dessert: "Desserts", Snack: "Snacks", Other: "Other" };
-      html += "<div class='menu-group reveal' id='potluck'><h2>Potluck</h2><div>";
+      html += "<div class='menu-group reveal' id='potluck'><h2>Potluck</h2><div class='menu-cats'>";
       cats.forEach((cat) => {
         const rows = items.filter((it) => it.category === cat);
+        html += "<div class='menu-cat'>";
         html += "<h3 style='margin-top:1rem;font-size:1.05rem;color:var(--cream)'>" + escapeHtml(labels[cat] || cat) + "</h3>";
         html += "<ul class='menu-list'>";
         if (rows.length) {
@@ -449,7 +450,7 @@
         } else {
           html += "<li class='menu-slot'>Waiting for a sign-up — placeholder</li>";
         }
-        html += "</ul>";
+        html += "</ul></div>";
       });
       html += "</div></div>";
 
