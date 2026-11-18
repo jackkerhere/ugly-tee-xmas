@@ -81,9 +81,14 @@
   </main>
   <footer class="site-footer">
     <p>Ugly Tee Christmas · Saturday 19 December 2026 · 6:30pm</p>
-    <p>at Brenda and Jack’s · preview, not published</p>
+    <p>at Brenda and Jack’s</p>
   </footer>
 
+  </div>
+  <audio id="site-song" src="assets/song.mp3" preload="auto" loop playsinline></audio>
+  <button type="button" class="mute-fab" id="mute-fab" hidden aria-label="Mute song" aria-pressed="false"></button>
+  <div class="resume-bar" id="resume-song" hidden>
+    <button type="button" class="btn btn-gold" id="resume-song-btn">Tap to keep the music going</button>
   </div>
   <script src="assets/js/data.js" defer></script>
   <script src="assets/js/adapters/mock.js" defer></script>

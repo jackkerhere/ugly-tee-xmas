@@ -124,11 +124,112 @@
     items.forEach((el) => io.observe(el));
   }
 
-  function openInvite(playSong) {
-    const screen = $(".gift-screen");
-    const btn = $(".gift-open");
+
+  const SONG_SRC = "assets/song.mp3";
+  const STORE_OPENED = "uglytee-opened";
+  const STORE_WANT = "uglytee-want-play";
+  const STORE_TIME = "uglytee-song-time";
+  const STORE_MUTED = "uglytee-song-muted";
+
+  function storeGet(key) {
+    try { return sessionStorage.getItem(key); } catch { return null; }
+  }
+  function storeSet(key, val) {
+    try { sessionStorage.setItem(key, val); } catch {}
+  }
+  function storeOn(key) { return storeGet(key) === "1"; }
+
+  function songEl() { return $("#site-song"); }
+
+  function muteIcon(muted) {
+    if (muted) {
+      return '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.5 12c0-1.8-1-3.3-2.5-4v2.2l2.4 2.4c.1-.2.1-.4.1-.6zm2.5 0c0 .9-.2 1.8-.5 2.6l1.5 1.5c.7-1.2 1-2.6 1-4.1 0-4.3-3-7.9-7-8.8v2.1c2.9.8 5 3.5 5 6.7zM4.3 3 3 4.3 7.7 9H3v6h4l5 5v-6.7l4.2 4.2c-.7.5-1.5.9-2.4 1.1v2.1c1.4-.3 2.7-1 3.8-1.9L19.7 21 21 19.7 4.3 3zM12 4 9.9 6.1 12 8.2V4z"/></svg>';
+    }
+    return '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.8-1-3.3-2.5-4v8c1.5-.7 2.5-2.2 2.5-4zM14 3.2v2.1c2.9.9 5 3.5 5 6.7s-2.1 5.8-5 6.7v2.1c4-.9 7-4.5 7-8.8s-3-7.9-7-8.8z"/></svg>';
+  }
+
+  function syncMuteFab() {
+    const audio = songEl();
+    const fab = $("#mute-fab");
+    if (!fab || !audio) return;
+    const muted = !!audio.muted;
+    fab.innerHTML = muteIcon(muted);
+    fab.setAttribute("aria-label", muted ? "Unmute song" : "Mute song");
+    fab.setAttribute("aria-pressed", muted ? "true" : "false");
+  }
+
+  function showMuteFab() {
+    const fab = $("#mute-fab");
+    if (fab) {
+      fab.hidden = false;
+      fab.classList.add("is-on");
+      syncMuteFab();
+    }
+  }
+
+  function showResume(show) {
+    const bar = $("#resume-song");
+    if (!bar) return;
+    bar.hidden = !show;
+    bar.classList.toggle("is-on", !!show);
+  }
+
+  function saveSongTime() {
+    const audio = songEl();
+    if (!audio || !isFinite(audio.currentTime)) return;
+    storeSet(STORE_TIME, String(audio.currentTime));
+  }
+
+  function restoreSongTime() {
+    const audio = songEl();
+    if (!audio) return;
+    const saved = parseFloat(storeGet(STORE_TIME) || "");
+    if (isFinite(saved) && saved > 0) {
+      const apply = () => {
+        try { audio.currentTime = saved; } catch {}
+      };
+      if (audio.readyState >= 1) apply();
+      else audio.addEventListener("loadedmetadata", apply, { once: true });
+    }
+  }
+
+  /* Must be called synchronously from a click/tap handler so iOS Safari
+     and Android Chrome treat it as a user gesture. */
+  function startSongFromGesture() {
+    const audio = songEl();
+    if (!audio) return;
+    audio.loop = true;
+    audio.setAttribute("loop", "");
+    if (storeGet(STORE_MUTED) === "1") audio.muted = true;
+    restoreSongTime();
+    const playResult = audio.play();
+    storeSet(STORE_WANT, "1");
+    showMuteFab();
+    showResume(false);
+    if (playResult && typeof playResult.then === "function") {
+      playResult.catch(function () {
+        showResume(true);
+      });
+    }
+  }
+
+  function tryResumeSong() {
+    const audio = songEl();
+    if (!audio || !storeOn(STORE_WANT)) return;
+    showMuteFab();
+    if (storeGet(STORE_MUTED) === "1") audio.muted = true;
+    restoreSongTime();
+    const playResult = audio.play();
+    if (playResult && typeof playResult.then === "function") {
+      playResult.then(function () { showResume(false); }).catch(function () { showResume(true); });
+    }
+  }
+
+  function openInvite() {
+    const screen = $("#gift-screen");
+    const btn = $("#gift-open");
     document.body.classList.add("is-open");
-    try { sessionStorage.setItem("uglytee-opened", "1"); } catch {}
+    storeSet(STORE_OPENED, "1");
     if (btn) btn.classList.add("is-opening");
     const delay = reduce ? 0 : 620;
     setTimeout(() => {
@@ -139,123 +240,167 @@
       const main = $("#main");
       if (main) main.removeAttribute("aria-hidden");
     }, delay);
-    if (playSong) window.InvitePlayer && window.InvitePlayer.tryPlay();
+    showMuteFab();
+  }
+
+  function applyGiftVisibility() {
+    const screen = $("#gift-screen");
+    const opened = storeOn(STORE_OPENED);
+    const params = new URLSearchParams(location.search);
+    const preopen = params.get("opened") === "1" || params.get("open") === "1";
+    if (!screen) {
+      if (opened || preopen) {
+        document.body.classList.add("is-open");
+        showMuteFab();
+      }
+      return;
+    }
+    if (opened || preopen) {
+      document.body.classList.add("is-open");
+      screen.classList.add("is-away");
+      screen.setAttribute("aria-hidden", "true");
+      const main = $("#main");
+      if (main) main.removeAttribute("aria-hidden");
+      showMuteFab();
+    } else {
+      document.body.classList.remove("is-open");
+      screen.classList.remove("is-away");
+      screen.removeAttribute("aria-hidden");
+      const main = $("#main");
+      if (main) main.setAttribute("aria-hidden", "true");
+    }
   }
 
   function giftGate() {
-    const screen = $(".gift-screen");
-    if (!screen) return;
+    applyGiftVisibility();
+    const opened = storeOn(STORE_OPENED);
     const params = new URLSearchParams(location.search);
     const preopen = params.get("opened") === "1" || params.get("open") === "1";
-    let already = false;
-    try { already = sessionStorage.getItem("uglytee-opened") === "1"; } catch {}
-    if (preopen || already) {
-      openInvite(false);
-      return;
-    }
-    const btn = $(".gift-open");
-    if (btn) {
-      btn.addEventListener("click", () => openInvite(true));
-    }
-    const main = $("#main");
-    if (main) main.setAttribute("aria-hidden", "true");
+    if (opened || preopen) tryResumeSong();
   }
 
+  let playerBound = false;
   function player() {
-    const audio = $("#song");
+    const audio = songEl();
+    if (!audio) return;
+    audio.loop = true;
+    audio.preload = "auto";
+    if (storeGet(STORE_MUTED) === "1") audio.muted = true;
+
+    if (!playerBound) {
+      playerBound = true;
+      audio.addEventListener("timeupdate", () => {
+        saveSongTime();
+        const cur = $("#time-cur");
+        const seek = $("#seek");
+        if (cur) cur.textContent = fmtTime(audio.currentTime);
+        if (seek && isFinite(audio.duration) && audio.duration > 0) {
+          seek.value = String((audio.currentTime / audio.duration) * 100);
+        }
+      });
+      audio.addEventListener("loadedmetadata", () => {
+        const dur = $("#time-dur");
+        if (dur) dur.textContent = fmtTime(audio.duration);
+        restoreSongTime();
+      });
+      audio.addEventListener("play", () => {
+        storeSet(STORE_WANT, "1");
+        showResume(false);
+        syncPlayerButtons();
+      });
+      audio.addEventListener("pause", syncPlayerButtons);
+      audio.addEventListener("volumechange", syncMuteFab);
+      audio.addEventListener("error", () => {
+        const missing = $("#player-missing");
+        if (missing) {
+          missing.hidden = false;
+          missing.textContent = "The party song couldn’t be loaded. Check assets/song.mp3.";
+        }
+      });
+
+      const fab = $("#mute-fab");
+      if (fab && !fab.dataset.bound) {
+        fab.dataset.bound = "1";
+        fab.addEventListener("click", () => {
+          const a = songEl();
+          if (!a) return;
+          a.muted = !a.muted;
+          storeSet(STORE_MUTED, a.muted ? "1" : "0");
+          syncMuteFab();
+        });
+      }
+      const resumeBtn = $("#resume-song-btn");
+      if (resumeBtn && !resumeBtn.dataset.bound) {
+        resumeBtn.dataset.bound = "1";
+        resumeBtn.addEventListener("click", () => startSongFromGesture());
+      }
+      // Delegation so the gift button still works after SPA swaps.
+      document.addEventListener("click", (e) => {
+        const btn = e.target.closest && e.target.closest("#gift-open");
+        if (!btn) return;
+        startSongFromGesture();
+        openInvite();
+      });
+    }
+
+    bindPlayerControls();
+    syncMuteFab();
+    if (storeOn(STORE_WANT) || storeOn(STORE_OPENED)) showMuteFab();
+  }
+
+  function fmtTime(t) {
+    if (!isFinite(t)) return "0:00";
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    return m + ":" + String(s).padStart(2, "0");
+  }
+  function playIcon() {
+    return '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>';
+  }
+  function pauseIcon() {
+    return '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>';
+  }
+  function syncPlayerButtons() {
+    const audio = songEl();
+    const playBtn = $("#play-btn");
+    if (!audio || !playBtn) return;
+    const paused = audio.paused;
+    playBtn.dataset.state = paused ? "paused" : "playing";
+    playBtn.innerHTML = paused ? playIcon() : pauseIcon();
+    playBtn.setAttribute("aria-label", paused ? "Play song" : "Pause song");
+  }
+  function bindPlayerControls() {
+    const audio = songEl();
     const playBtn = $("#play-btn");
     const seek = $("#seek");
-    const cur = $("#time-cur");
     const dur = $("#time-dur");
-    const missing = $("#player-missing");
-    if (!audio || !playBtn) {
-      window.InvitePlayer = { tryPlay: function () {} };
-      return;
+    if (audio && dur && isFinite(audio.duration) && audio.duration > 0) {
+      dur.textContent = fmtTime(audio.duration);
     }
-
-    let ready = false;
-    let failed = false;
-
-    function fmt(t) {
-      if (!isFinite(t)) return "0:00";
-      const m = Math.floor(t / 60);
-      const s = Math.floor(t % 60);
-      return m + ":" + String(s).padStart(2, "0");
-    }
-
-    function showMissing(msg) {
-      failed = true;
-      if (missing) {
-        missing.hidden = false;
-        missing.textContent = msg;
-      }
-      playBtn.setAttribute("disabled", "disabled");
-      playBtn.setAttribute("aria-label", "Song not available yet");
-    }
-
-    audio.addEventListener("loadedmetadata", () => {
-      ready = true;
-      if (dur) dur.textContent = fmt(audio.duration);
-    });
-    audio.addEventListener("timeupdate", () => {
-      if (cur) cur.textContent = fmt(audio.currentTime);
-      if (seek && isFinite(audio.duration) && audio.duration > 0) {
-        seek.value = String((audio.currentTime / audio.duration) * 100);
-      }
-    });
-    audio.addEventListener("ended", () => {
-      playBtn.dataset.state = "paused";
+    if (playBtn && !playBtn.dataset.bound) {
+      playBtn.dataset.bound = "1";
       playBtn.innerHTML = playIcon();
-    });
-    audio.addEventListener("error", () => {
-      showMissing("The party song isn’t here yet. Add assets/song.mp3 and the player will work.");
-    });
-    audio.addEventListener("play", () => {
-      playBtn.dataset.state = "playing";
-      playBtn.innerHTML = pauseIcon();
-    });
-    audio.addEventListener("pause", () => {
-      playBtn.dataset.state = "paused";
-      playBtn.innerHTML = playIcon();
-    });
-
-    function playIcon() {
-      return '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>';
-    }
-    function pauseIcon() {
-      return '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>';
-    }
-
-    playBtn.innerHTML = playIcon();
-    playBtn.addEventListener("click", () => {
-      if (failed) return;
-      if (audio.paused) audio.play().catch(() => {
-        showMissing("The party song isn’t here yet. Add assets/song.mp3 and the player will work.");
+      playBtn.addEventListener("click", () => {
+        const a = songEl();
+        if (!a) return;
+        if (a.paused) startSongFromGesture();
+        else a.pause();
       });
-      else audio.pause();
-    });
-
-    if (seek) {
+    }
+    if (seek && !seek.dataset.bound) {
+      seek.dataset.bound = "1";
       seek.addEventListener("input", () => {
-        if (!isFinite(audio.duration)) return;
-        audio.currentTime = (Number(seek.value) / 100) * audio.duration;
+        const a = songEl();
+        if (!a || !isFinite(a.duration)) return;
+        a.currentTime = (Number(seek.value) / 100) * a.duration;
+        saveSongTime();
       });
     }
-
-    // Probe the file so a missing mp3 shows the fallback without a click.
-    fetch("assets/song.mp3", { method: "HEAD" }).then((res) => {
-      if (!res.ok) showMissing("The party song isn’t here yet. Add assets/song.mp3 and the player will work.");
-    }).catch(() => {
-      showMissing("The party song isn’t here yet. Add assets/song.mp3 and the player will work.");
-    });
-
-    window.InvitePlayer = {
-      tryPlay: function () {
-        if (failed) return;
-        audio.play().catch(function () { /* Autoplay may still wait for a later tap on the player. */ });
-      }
-    };
+    syncPlayerButtons();
   }
+
+  window.InvitePlayer = { tryPlay: startSongFromGesture };
+
 
   function mapDialog() {
     const openers = $all("[data-open-map]");
@@ -429,6 +574,97 @@
   function escapeAttr(str) { return escapeHtml(str); }
   function globalInvite() { return window.InviteData; }
 
+  function pageKey(url) {
+    const path = new URL(url, location.href).pathname;
+    if (/itinerary\.html$/i.test(path)) return "itinerary";
+    if (/menu\.html$/i.test(path)) return "menu";
+    if (/me\.html$/i.test(path)) return "me";
+    return "home";
+  }
+
+  function updateNavCurrent() {
+    const key = pageKey(location.href);
+    $all(".site-nav a").forEach((a) => {
+      const href = a.getAttribute("href") || "";
+      const target = pageKey(href);
+      if (target === key) a.setAttribute("aria-current", "page");
+      else a.removeAttribute("aria-current");
+    });
+  }
+
+  function afterPageChange() {
+    updateNavCurrent();
+    carryTokenInLinks();
+    personalizeGift();
+    applyGiftVisibility();
+    mapDialog();
+    reveals();
+    renderMenu();
+    renderGuestPage();
+    bindPlayerControls();
+  }
+
+  function ensureHomeChrome(doc) {
+    const wrap = $(".wrap");
+    if (!wrap) return;
+    if (!$("#gift-screen") && doc.querySelector("#gift-screen")) {
+      wrap.insertBefore(doc.querySelector("#gift-screen"), wrap.firstChild);
+    }
+    if (!$("#map-dialog") && doc.querySelector("#map-dialog")) {
+      wrap.appendChild(doc.querySelector("#map-dialog"));
+    }
+  }
+
+  async function swapTo(href, push) {
+    const url = new URL(href, location.href);
+    const k = currentToken();
+    if (k && !url.searchParams.get("k")) url.searchParams.set("k", k);
+    const res = await fetch(url.pathname + url.search, { credentials: "same-origin" });
+    if (!res.ok) {
+      location.href = url.href;
+      return;
+    }
+    const html = await res.text();
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const newMain = doc.querySelector("#main");
+    const oldMain = $("#main");
+    if (!newMain || !oldMain) {
+      location.href = url.href;
+      return;
+    }
+    ensureHomeChrome(doc);
+    oldMain.replaceWith(newMain);
+    document.title = doc.title;
+    const keepOpen = storeOn(STORE_OPENED) || document.body.classList.contains("is-open");
+    document.body.className = doc.body.className;
+    if (keepOpen) document.body.classList.add("is-open");
+    if (push) {
+      history.pushState({ spa: true }, "", url.pathname + url.search + url.hash);
+    }
+    window.scrollTo(0, 0);
+    afterPageChange();
+  }
+
+  function spaNavigate() {
+    document.addEventListener("click", (e) => {
+      if (e.defaultPrevented || e.button !== 0) return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = e.target.closest && e.target.closest("a[href]");
+      if (!a) return;
+      const href = a.getAttribute("href");
+      if (!isSitePage(href)) return;
+      const url = new URL(href, location.href);
+      if (url.origin !== location.origin) return;
+      // Same-page hash only
+      if (url.pathname === location.pathname && url.search === location.search && url.hash) return;
+      e.preventDefault();
+      swapTo(url.href, true).catch(() => { location.href = url.href; });
+    });
+    window.addEventListener("popstate", () => {
+      swapTo(location.href, false).catch(() => { location.reload(); });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     const params = new URLSearchParams(location.search);
     if (params.get("shot") === "1") {
@@ -438,11 +674,12 @@
     buildSnow();
     carryTokenInLinks();
     personalizeGift();
-    giftGate();
     player();
+    giftGate();
     mapDialog();
     reveals();
     renderMenu();
     renderGuestPage();
+    spaNavigate();
   });
 })();

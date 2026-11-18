@@ -747,3 +747,39 @@ html.is-shot .flake { display: none !important; animation: none !important; }
 html.is-shot *, html.is-shot *::before, html.is-shot *::after {
   animation-play-state: paused !important;
 }
+
+/* Floating mute control — stays on screen, including during tab switches */
+.mute-fab {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right, 12px));
+  bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  z-index: 25;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  color: var(--navy);
+  box-shadow: 0 6px 0 #8a6a1e, 0 12px 24px rgba(0,0,0,0.28);
+  cursor: pointer;
+  display: none;
+  place-items: center;
+  padding: 0;
+  transition: transform 200ms var(--ease), box-shadow 200ms var(--ease);
+}
+.mute-fab.is-on { display: grid; }
+.mute-fab:hover { transform: translateY(-2px) scale(1.04); }
+.mute-fab:active { transform: scale(0.96); }
+.mute-fab svg { display: block; }
+.resume-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 26;
+  display: none;
+  justify-content: center;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, transparent, rgba(11,20,51,0.92));
+}
+.resume-bar.is-on { display: flex; }

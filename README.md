@@ -26,7 +26,7 @@ For design screenshots only, a fake guest exists at `me.html?k=demo` (Demo Guest
 
 ## Song
 
-Place the MP3 at `assets/song.mp3`. The player already points there and falls back if the file is missing.
+The party song is at `assets/song.mp3`. Tapping the gift starts it immediately (and loops). A mute button stays on screen. Tab switches do not reload the page, so the song keeps playing. Direct URLs still work.
 
 ## Data layer
 
