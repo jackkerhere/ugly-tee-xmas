@@ -329,7 +329,7 @@ main { padding-bottom: 4rem; }
   margin: 0 auto;
   text-align: center;
 }
-.hero-copy { margin: 0.5rem auto 1.25rem; max-width: 36rem; }
+.hero-copy { margin: 0.5rem auto 1rem; max-width: 36rem; }
 .hero-date {
   font-family: var(--font-display);
   font-size: clamp(1.35rem, 4vw, 2rem);
@@ -339,18 +339,28 @@ main { padding-bottom: 4rem; }
 .poster-frame {
   display: block;
   margin: 0 auto;
-  width: min(100%, 420px);
-  border-radius: 28px;
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 1520 / 2688;
+  height: auto;
+  border-radius: 0;
   overflow: hidden;
-  border: 5px solid var(--gold);
-  box-shadow: var(--shadow), 0 0 0 8px rgba(212,176,74,0.18);
+  border: 3px solid var(--gold);
+  box-shadow: var(--shadow);
   background: #0b1433;
   transition: transform 280ms var(--ease), box-shadow 280ms var(--ease);
 }
-a.poster-frame:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 22px 48px rgba(6,10,30,0.45), 0 0 0 8px rgba(212,176,74,0.28); }
+a.poster-frame:hover { transform: translateY(-4px); box-shadow: 0 22px 48px rgba(6,10,30,0.45), 0 0 0 8px rgba(212,176,74,0.28); }
 a.poster-frame:active { transform: scale(0.995); }
-.poster-frame img { width: 100%; }
-.poster-wide { width: min(100%, 560px); }
+.poster-frame picture,
+.poster-frame img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  object-position: center top;
+}
+.poster-wide { width: 100%; }
 
 /* Placeholder notes */
 .placeholder {
@@ -442,10 +452,18 @@ a.poster-frame:active { transform: scale(0.995); }
 .host-note { margin-top: 0.5rem; color: rgba(251,246,236,0.8); }
 
 /* Crew */
+.crew-poster {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
 .crew-art {
-  width: min(100%, 640px);
+  width: 100%;
+  height: auto;
+  max-width: 100%;
   margin: 0 auto;
   filter: drop-shadow(0 16px 30px rgba(0,0,0,0.3));
+  object-fit: contain;
 }
 
 /* Player + lyrics */
@@ -683,9 +701,37 @@ body.no-gift .gift-screen { display: none; }
 @media (min-width: 800px) {
   .grid-4 { grid-template-columns: repeat(4, 1fr); }
   .grid-2, .secret-grid { grid-template-columns: 1fr 1fr; }
-  .poster-frame { width: min(100%, 480px); }
   .brand-name { font-size: 1.05rem; }
-  .hero { padding-top: 1.75rem; }
+  .hero {
+    max-width: none;
+    padding: 0.45rem 1.5rem 1.5rem;
+  }
+  .hero-copy { margin: 0.1rem auto 0.55rem; }
+  .hero-date { font-size: 1.35rem; margin: 0.15rem 0 0.05rem; }
+  .wordmark { width: min(100%, 280px); margin-bottom: 0.1rem; }
+  .poster-frame {
+    width: auto;
+    height: 90vh;
+    max-height: 90vh;
+    max-width: min(100%, calc(90vh * 1520 / 2688));
+    aspect-ratio: 1520 / 2688;
+    border-radius: 28px;
+    border-width: 5px;
+    box-shadow: var(--shadow), 0 0 0 8px rgba(212,176,74,0.18);
+  }
+  .poster-frame picture,
+  .poster-frame img {
+    width: auto;
+    height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+  }
+  .crew-art {
+    width: auto;
+    height: min(90vh, 92svh);
+    max-width: 100%;
+  }
+  a.poster-frame:hover { transform: translateY(-4px) scale(1.01); }
 }
 
 @media (max-width: 799px) {
@@ -706,6 +752,26 @@ body.no-gift .gift-screen { display: none; }
     white-space: nowrap;
   }
   .site-header { padding-left: 0.7rem; padding-right: 0.7rem; }
+  .hero {
+    padding: 0.85rem 0 0;
+    max-width: none;
+  }
+  .hero-copy { padding: 0 1rem; margin-bottom: 0.85rem; }
+  .poster-frame {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+  }
+  a.poster-frame:hover { transform: none; }
+  #crew.section {
+    padding-left: 0;
+    padding-right: 0;
+    max-width: none;
+  }
+  #crew .section-head { padding: 0 var(--pad); }
+  .crew-art { width: 100%; max-width: 100%; }
 }
 .wordmark {
   display: block;
@@ -744,6 +810,8 @@ html.is-shot, html.is-shot * { cursor: none !important; }
 html.is-shot { scrollbar-width: none; }
 html.is-shot::-webkit-scrollbar, html.is-shot *::-webkit-scrollbar { display: none; }
 html.is-shot .flake { display: none !important; animation: none !important; }
+html.is-shot .mute-fab, html.is-shot .resume-bar { display: none !important; }
+
 html.is-shot *, html.is-shot *::before, html.is-shot *::after {
   animation-play-state: paused !important;
 }
