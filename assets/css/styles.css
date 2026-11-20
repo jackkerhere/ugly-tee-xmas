@@ -893,6 +893,110 @@ body.is-open .gift-screen { pointer-events: none; }
 
 .logout-line a { color: var(--gold-bright); font-weight: 700; }
 
+/* Logged-in My page sub-tabs */
+body.has-me-subnav main.section { padding-top: 0.75rem; }
+.me-subnav {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 19;
+  width: auto;
+  max-width: none;
+  margin: 0 calc(-1 * var(--pad)) 1.15rem;
+  padding: 0.55rem var(--pad);
+  background: linear-gradient(180deg, rgba(11,20,51,0.96), rgba(11,20,51,0.88));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(212,176,74,0.18);
+}
+.me-segments {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 4px;
+  width: 100%;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 4px;
+  background: var(--cream);
+  border: 3px solid #fff;
+  border-radius: 18px;
+  box-shadow: var(--shadow-soft);
+}
+.me-tab {
+  position: relative;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0.45rem 0.4rem;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-weight: 650;
+  font-size: clamp(0.76rem, 3vw, 0.98rem);
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  cursor: pointer;
+}
+.me-tab:hover { background: rgba(212, 176, 74, 0.18); }
+.me-tab:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.me-tab[aria-selected="true"] {
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  box-shadow: 0 3px 0 #8a6a1e;
+}
+.me-tab-badge {
+  position: absolute;
+  top: 0.12rem;
+  right: 0.12rem;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  padding: 0 0.28rem;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px #fff;
+}
+.me-tab-badge[hidden] { display: none; }
+.me-lede { margin-bottom: 1.15rem; }
+.me-panel { width: 100%; max-width: 100%; }
+.me-panel[hidden] { display: none; }
+.person-card {
+  text-align: center;
+  width: 100%;
+  max-width: 28rem;
+  margin: 0 auto 1.25rem;
+  padding: 1.4rem 1.2rem 1.3rem;
+}
+.person-card .who-face-wrap.is-large {
+  width: min(58%, 11rem);
+  max-width: 11rem;
+  margin: 0 auto 0.85rem;
+}
+
+.budget-badge {
+  display: inline-block;
+  margin: 0.55rem 0 0.15rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  background: #e4f3e6;
+  border: 2px solid rgba(42, 143, 60, 0.35);
+  color: var(--green-deep);
+  font-family: var(--font-display);
+  font-weight: 650;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+.budget-badge strong { font-weight: 700; }
+
+
 /* Secret Santa chat */
 .ss-chat { width: 100%; max-width: 100%; }
 .wishlist-card { margin-top: 0.25rem; }

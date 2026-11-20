@@ -13,6 +13,8 @@
   const STORE_TOKEN = "uglytee-guest-token";
   const STORE_PIN_TRIES = "uglytee-pin-tries";
   const STORE_PIN_LOCK = "uglytee-pin-lock-until";
+  const STORE_ME_TAB = "uglytee-me-subtab";
+  const STORE_CHAT_READ = "uglytee-chat-read-v1";
   const PIN_MAX_TRIES = 5;
   const PIN_LOCK_MS = 60 * 1000;
 
@@ -1049,7 +1051,11 @@
           if (empty) empty.remove();
           appendChatMessages(log, messages, false);
         }
-        if (messages.length) chatCtx.lastAt = messages[messages.length - 1].createdAt;
+        if (messages.length) {
+          chatCtx.lastAt = messages[messages.length - 1].createdAt;
+          markThreadRead(token, thread, chatCtx.lastAt);
+        }
+        refreshSantaUnread(root, token, guest);
       });
     }
 
@@ -1104,6 +1110,8 @@
         if (empty) empty.remove();
         appendChatMessages(log, [out.message], true);
         chatCtx.lastAt = out.message.createdAt;
+        markThreadRead(token, thread, chatCtx.lastAt);
+        refreshSantaUnread(root, token, guest);
       });
     });
 
@@ -1122,6 +1130,126 @@
     }, CHAT_POLL_MS);
   }
 
+
+  const ME_TAB_IDS = { "ugly-tee": true, santa: true, bring: true };
+
+  function normalizeMeTab(raw) {
+    return ME_TAB_IDS[String(raw || "").replace(/^#/, "").trim()] ? String(raw || "").replace(/^#/, "").trim() : "";
+  }
+
+  function readMeTab() {
+    const fromHash = normalizeMeTab(location.hash);
+    if (fromHash) return fromHash;
+    try {
+      const stored = normalizeMeTab(sessionStorage.getItem(STORE_ME_TAB));
+      if (stored) return stored;
+    } catch (_) { /* ignore */ }
+    return "ugly-tee";
+  }
+
+  function persistMeTab(tab) {
+    const chosen = normalizeMeTab(tab) || "ugly-tee";
+    try { sessionStorage.setItem(STORE_ME_TAB, chosen); } catch (_) { /* ignore */ }
+    const next = "#" + chosen;
+    if (location.hash !== next) {
+      history.replaceState(history.state || { spa: true }, "", location.pathname + location.search + next);
+    }
+  }
+
+  function readChatMarks(token) {
+    try {
+      const all = JSON.parse(sessionStorage.getItem(STORE_CHAT_READ) || "{}");
+      const row = (all && all[String(token)]) || {};
+      return { giftee: row.giftee || "", santa: row.santa || "" };
+    } catch (_) {
+      return { giftee: "", santa: "" };
+    }
+  }
+
+  function writeChatMarks(token, marks) {
+    try {
+      const all = JSON.parse(sessionStorage.getItem(STORE_CHAT_READ) || "{}");
+      all[String(token)] = { giftee: (marks && marks.giftee) || "", santa: (marks && marks.santa) || "" };
+      sessionStorage.setItem(STORE_CHAT_READ, JSON.stringify(all));
+    } catch (_) { /* ignore */ }
+  }
+
+  function markThreadRead(token, thread, lastAt) {
+    if (!token || !lastAt || (thread !== "giftee" && thread !== "santa")) return;
+    const marks = readChatMarks(token);
+    if (!marks[thread] || lastAt > marks[thread]) {
+      marks[thread] = lastAt;
+      writeChatMarks(token, marks);
+    }
+  }
+
+  function updateSantaBadge(root, count) {
+    const badge = $("#santa-unread", root);
+    if (!badge) return;
+    const n = Number(count) || 0;
+    if (n > 0) {
+      badge.hidden = false;
+      badge.textContent = n > 9 ? "9+" : String(n);
+    } else {
+      badge.hidden = true;
+      badge.textContent = "";
+    }
+  }
+
+  function refreshSantaUnread(root, token, guest) {
+    if (!root || !token || !window.InviteData) return Promise.resolve();
+    const marks = readChatMarks(token);
+    const viewing = root.getAttribute("data-me-tab") === "santa" && chatCtx ? chatCtx.thread : "";
+    return Promise.all([
+      window.InviteData.listMessages(token, "giftee", marks.giftee || ""),
+      window.InviteData.listMessages(token, "santa", marks.santa || "")
+    ]).then((rows) => {
+      let total = 0;
+      ["giftee", "santa"].forEach((thread, i) => {
+        const res = rows[i] || {};
+        const messages = res.ok ? (res.messages || []) : [];
+        if (viewing === thread) {
+          const last = messages.length ? messages[messages.length - 1].createdAt : "";
+          if (last) markThreadRead(token, thread, last);
+        } else {
+          total += messages.filter((m) => !m.fromMe).length;
+        }
+      });
+      updateSantaBadge(root, total);
+    }).catch(() => {});
+  }
+
+  function showMeTab(root, tab, opts) {
+    const chosen = normalizeMeTab(tab) || "ugly-tee";
+    root.setAttribute("data-me-tab", chosen);
+    $all(".me-tab", root).forEach((btn) => {
+      const on = btn.getAttribute("data-me-tab") === chosen;
+      btn.setAttribute("aria-selected", on ? "true" : "false");
+      btn.tabIndex = on ? 0 : -1;
+    });
+    $all(".me-panel", root).forEach((panel) => {
+      panel.hidden = panel.id !== "me-panel-" + chosen;
+    });
+    if (!opts || opts.persist !== false) persistMeTab(chosen);
+    if (chosen === "santa" && tokenFromCtx()) {
+      const token = tokenFromCtx();
+      if (chatCtx && chatCtx.thread && chatCtx.lastAt) markThreadRead(token, chatCtx.thread, chatCtx.lastAt);
+      refreshSantaUnread(root, token, chatCtx && chatCtx.guest);
+    }
+  }
+
+  function tokenFromCtx() {
+    return (chatCtx && chatCtx.token) || currentToken();
+  }
+
+  function bindMeSubtabs(root, token, guest) {
+    showMeTab(root, readMeTab(), { persist: true });
+    $all(".me-tab", root).forEach((btn) => {
+      btn.addEventListener("click", () => showMeTab(root, btn.getAttribute("data-me-tab")));
+    });
+    refreshSantaUnread(root, token, guest);
+  }
+
   function renderGuestPage() {
     const root = $("#me-root");
     if (!root || !globalInvite()) return;
@@ -1129,12 +1257,14 @@
     const data = window.InviteData;
 
     if (!token) {
+      document.body.classList.remove("has-me-subnav");
       renderClaimGate(root);
       return;
     }
 
     data.getGuestByToken(token).then((res) => {
       if (!res.ok) {
+        document.body.classList.remove("has-me-subnav");
         root.innerHTML = gateHtml("We can’t open this personal link.", "Please go back and pick your name, or ask Jack for help.") +
           '<p class="logout-line"><a href="me.html" id="pin-instead">Pick your name instead</a></p>';
         const alt = $("#pin-instead", root);
@@ -1143,24 +1273,37 @@
       }
       const g = res.guest;
       const bringing = g.bringing || { dish: "", category: "Main", notes: "" };
+      document.body.classList.add("has-me-subnav");
       root.innerHTML = `
+        <div class="me-subnav" role="tablist" aria-label="My page sections">
+          <div class="me-segments">
+            <button type="button" class="me-tab" role="tab" id="me-tab-ugly-tee" data-me-tab="ugly-tee" aria-controls="me-panel-ugly-tee" aria-selected="true">Ugly Tee</button>
+            <button type="button" class="me-tab" role="tab" id="me-tab-santa" data-me-tab="santa" aria-controls="me-panel-santa" aria-selected="false">Secret Santa<span class="me-tab-badge" id="santa-unread" hidden></span></button>
+            <button type="button" class="me-tab" role="tab" id="me-tab-bring" data-me-tab="bring" aria-controls="me-panel-bring" aria-selected="false">What I’m bringing</button>
+          </div>
+        </div>
         ${res.demo || (g.token && String(g.token).indexOf("demo") === 0) ? '<p class="banner-demo">Preview data only — not a real draw.</p>' : ""}
         <p class="hi">${guestFaceHtml(g.name, { className: "is-large", sizes: "124px" })}<span class="outline-red">Hi, ${escapeHtml(g.name)}</span></p>
-        <p class="lede" style="margin-bottom:1.5rem">This page is just for you. Please don’t share your link — it shows who you’re getting a gift and an ugly tee for.</p>
-        <div class="secret-grid">
-          <article class="card secret-card reveal">
-            <p class="icon" aria-hidden="true">🎁</p>
-            <h3>You are <span class="for">${escapeHtml(g.secretSantaFor)}</span>’s Secret Santa</h3>
-            <p class="hint">Buy them a gift. Keep it secret!</p>
-          </article>
-          <article class="card secret-card reveal">
-            <p class="icon" aria-hidden="true">👕</p>
+        <p class="lede me-lede">This page is just for you. Please don’t share your link.</p>
+        <section class="me-panel" id="me-panel-ugly-tee" role="tabpanel" aria-labelledby="me-tab-ugly-tee">
+          <article class="card secret-card person-card reveal">
+            ${guestFaceHtml(g.uglyTeeFor, { className: "is-large", sizes: "176px" })}
             <h3>You’re getting an ugly tee for:</h3>
             <p class="for">${escapeHtml(g.uglyTeeFor)}</p>
+            <p class="hint">Keep it a surprise until the exchange.</p>
           </article>
-        </div>
-        ${chatSectionHtml(g, "")}
-        <form class="card form reveal" id="bringing-form" style="margin-top:1.25rem">
+        </section>
+        <section class="me-panel" id="me-panel-santa" role="tabpanel" aria-labelledby="me-tab-santa" hidden>
+          <article class="card secret-card person-card reveal">
+            ${guestFaceHtml(g.secretSantaFor, { className: "is-large", sizes: "176px" })}
+            <h3>You are <span class="for">${escapeHtml(g.secretSantaFor)}</span>’s Secret Santa</h3>
+            <p class="budget-badge">Budget: <strong>No limit</strong></p>
+            <p class="hint">Buy them a gift. Keep it secret!</p>
+          </article>
+          ${chatSectionHtml(g, "")}
+        </section>
+        <section class="me-panel" id="me-panel-bring" role="tabpanel" aria-labelledby="me-tab-bring" hidden>
+        <form class="card form reveal" id="bringing-form">
           <h3>What I’m bringing</h3>
           <p>This is a potluck. Your dish will appear on the Menu tab.</p>
           <label for="dish">Dish</label>
@@ -1179,6 +1322,7 @@
           </div>
           <p class="form-status" id="form-status" hidden></p>
         </form>
+        </section>
         <p class="logout-line"><a href="me.html" id="logout-link">Not you? Log out</a></p>
       `;
       const logout = $("#logout-link", root);
@@ -1189,6 +1333,7 @@
       });
       bindWishlist(root, token);
       bindChat(root, token, g);
+      bindMeSubtabs(root, token, g);
       const form = $("#bringing-form");
       const status = $("#form-status");
       form.addEventListener("submit", (e) => {
@@ -1324,6 +1469,12 @@
     });
     window.addEventListener("popstate", () => {
       swapTo(location.href, false).catch(() => { location.reload(); });
+    });
+    window.addEventListener("hashchange", () => {
+      const root = $("#me-root");
+      if (!root || !$(".me-subnav", root)) return;
+      const tab = normalizeMeTab(location.hash);
+      if (tab && root.getAttribute("data-me-tab") !== tab) showMeTab(root, tab);
     });
   }
 
