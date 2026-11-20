@@ -1150,8 +1150,7 @@
         <div class="secret-grid">
           <article class="card secret-card reveal">
             <p class="icon" aria-hidden="true">🎁</p>
-            <h3>You’re the Secret Santa for:</h3>
-            <p class="for">${escapeHtml(g.secretSantaFor)}</p>
+            <h3>You are <span class="for">${escapeHtml(g.secretSantaFor)}</span>’s Secret Santa</h3>
             <p class="hint">Buy them a gift. Keep it secret!</p>
           </article>
           <article class="card secret-card reveal">
