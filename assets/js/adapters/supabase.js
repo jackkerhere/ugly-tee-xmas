@@ -4,7 +4,8 @@
  * The publishable key is public by design — never add a service-role key here.
  *
  * PIN checks, draws and santa identity stay on the server:
- *   login_with_pin hashes and rate-limits on the server;
+ *   list_guests_public returns id, display_name, and claimed only;
+ *   claim_guest / login_with_pin hash and rate-limit on the server (name + PIN);
  *   get_me returns only the caller’s name and their two giftee names;
  *   list_messages / send_message return a role, never the santa’s name, to the giftee.
  *
@@ -45,9 +46,16 @@
 
   const adapter = {
     name: "supabase",
-    loginWithPin(pin) {
+    listGuestsPublic() {
+      return rpc("list_guests_public", {});
+    },
+    claimGuest(guestId, pin) {
       const digits = String(pin || "").replace(/\D/g, "");
-      return rpc("login_with_pin", { pin: digits });
+      return rpc("claim_guest", { guest_id: guestId, pin: digits });
+    },
+    loginWithPin(guestId, pin) {
+      const digits = String(pin || "").replace(/\D/g, "");
+      return rpc("login_with_pin", { guest_id: guestId, pin: digits });
     },
     getGuestByToken(token) {
       return rpc("get_me", { token: String(token || "").trim() });

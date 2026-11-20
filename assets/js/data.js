@@ -33,13 +33,14 @@
   const api = {
     config,
     register,
+    listGuestsPublic: () => current().listGuestsPublic(),
+    claimGuest: (guestId, pin) => current().claimGuest(guestId, pin),
     getGuestByToken: (token) => current().getGuestByToken(token),
-    loginWithPin: (pin) => current().loginWithPin(pin),
+    loginWithPin: (guestId, pin) => current().loginWithPin(guestId, pin),
     saveBringing: (token, payload) => current().saveBringing(token, payload),
     clearBringing: (token) => current().clearBringing(token),
     listMenuItems: () => current().listMenuItems(),
     listHostProvisions: () => current().listHostProvisions(),
-    // Chat / wish list. UI may poll listMessages(token, thread, since).
     listMessages: (token, thread, since) => current().listMessages(token, thread, since),
     sendMessage: (token, thread, text) => current().sendMessage(token, thread, text),
     getWishlist: (token, scope) => current().getWishlist(token, scope),

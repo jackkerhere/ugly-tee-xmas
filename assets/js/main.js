@@ -517,29 +517,112 @@
     } catch (_) { /* ignore */ }
   }
 
-  function pinGateHtml() {
-    const boxes = Array.from({ length: 6 }, (_, i) =>
+  function pinBoxesHtml() {
+    return Array.from({ length: 6 }, (_, i) =>
       `<input class="pin-digit" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="${i === 0 ? "one-time-code" : "off"}" aria-label="PIN digit ${i + 1}" data-index="${i}">`
     ).join("");
+  }
+
+  const WEAK_PIN_SET = {
+    "012345": 1, "123456": 1, "234567": 1, "345678": 1, "456789": 1, "567890": 1,
+    "987654": 1, "876543": 1, "765432": 1, "654321": 1, "543210": 1, "432109": 1,
+    "321098": 1, "210987": 1, "109876": 1, "098765": 1
+  };
+
+  function isWeakPin(digits) {
+    const pin = String(digits || "");
+    if (!/^\d{6}$/.test(pin)) return true;
+    if (/^(.)\1{5}$/.test(pin)) return true;
+    return !!WEAK_PIN_SET[pin];
+  }
+
+  function startGuestSession(token) {
+    const k = String(token || "").trim();
+    if (!k) return;
+    persistToken(k);
+    const url = new URL(location.href);
+    url.searchParams.set("k", k);
+    const next = url.pathname.split("/").pop() + (url.search ? "?" + url.searchParams.toString() : "") + url.hash;
+    history.replaceState({ spa: true }, "", next);
+    afterPageChange();
+  }
+
+  function backToNameLink() {
+    return '<p class="logout-line"><a href="me.html" id="pick-another-name">Choose a different name</a></p>';
+  }
+
+  function whoGridHtml(guests) {
+    const tiles = (guests || []).map((g) => {
+      const claimed = !!g.claimed;
+      const name = g.display_name || g.name || "";
+      return `<button type="button" class="who-tile${claimed ? " is-claimed" : ""}" data-guest-id="${escapeAttr(g.id)}" data-claimed="${claimed ? "1" : "0"}" data-name="${escapeAttr(name)}">
+        <span class="who-name">${escapeHtml(name)}</span>
+        ${claimed ? '<span class="who-claimed">Claimed — log in with your PIN</span>' : ""}
+      </button>`;
+    }).join("");
+    return `
+      <div class="who-gate">
+        <div class="section-head" style="margin-bottom:1.1rem">
+          <div class="cloud-title"><h1>Who are you?</h1></div>
+          <p class="lede">Tap your name to claim your page, or log in if you’ve already created a PIN.</p>
+        </div>
+        <div class="who-grid" role="list">${tiles}</div>
+        <p class="pin-error" id="who-error" hidden></p>
+      </div>`;
+  }
+
+  function confirmYouHtml(guest) {
     return `
       <div class="pin-gate">
         <div class="card">
-          <h1 class="outline-red" style="-webkit-text-stroke:4px #fff">Welcome</h1>
-          <p class="pin-lead">This page is private. Enter your 6-digit PIN to open it.</p>
-          <form id="pin-form" action="#" novalidate>
-            <div class="pin-boxes" role="group" aria-label="Six-digit PIN">${boxes}</div>
-            <p class="pin-error" id="pin-error" hidden></p>
-            <p style="margin-top:1rem"><button class="btn btn-gold" type="submit">Open my page</button></p>
-          </form>
+          <h1 class="outline-red" style="-webkit-text-stroke:4px #fff">Are you ${escapeHtml(guest.name)}?</h1>
+          <p class="pin-lead">Only claim this name if it is you. Your page is private once it is locked to your PIN.</p>
+          <div class="form-actions" style="justify-content:center;margin-top:1.2rem">
+            <button type="button" class="btn btn-gold" id="confirm-yes">Yes, that’s me</button>
+            <button type="button" class="btn btn-ghost" id="confirm-no" style="color:var(--navy);border-color:#e0d4bf">Not me</button>
+          </div>
         </div>
       </div>`;
   }
 
-  function bindPinForm(root) {
-    const form = $("#pin-form", root);
+  function createPinHtml(guest, step) {
+    const confirm = step === "confirm";
+    return `
+      <div class="pin-gate">
+        <div class="card">
+          <h1 class="outline-red" style="-webkit-text-stroke:4px #fff">${confirm ? "Confirm your PIN" : "Create your 6-digit PIN"}</h1>
+          <p class="pin-lead">${confirm ? "Type the same PIN once more." : "This is for " + escapeHtml(guest.name) + ". You’ll use it to open your page later."}</p>
+          <p class="pin-warn">Only you know this. Don’t share it.</p>
+          <form id="pin-form" action="#" novalidate>
+            <div class="pin-boxes" role="group" aria-label="${confirm ? "Confirm six-digit PIN" : "New six-digit PIN"}">${pinBoxesHtml()}</div>
+            <p class="pin-error" id="pin-error" hidden></p>
+            <p style="margin-top:1rem"><button class="btn btn-gold" type="submit">${confirm ? "Save PIN and open my page" : "Continue"}</button></p>
+          </form>
+          ${backToNameLink()}
+        </div>
+      </div>`;
+  }
+
+  function loginPinHtml(guest) {
+    return `
+      <div class="pin-gate">
+        <div class="card">
+          <h1 class="outline-red" style="-webkit-text-stroke:4px #fff">Welcome back, ${escapeHtml(guest.name)}</h1>
+          <p class="pin-lead">Enter your 6-digit PIN to open your page.</p>
+          <form id="pin-form" action="#" novalidate>
+            <div class="pin-boxes" role="group" aria-label="Six-digit PIN">${pinBoxesHtml()}</div>
+            <p class="pin-error" id="pin-error" hidden></p>
+            <p style="margin-top:1rem"><button class="btn btn-gold" type="submit">Open my page</button></p>
+          </form>
+          ${backToNameLink()}
+        </div>
+      </div>`;
+  }
+
+  function bindPinBoxes(root, opts) {
     const inputs = $all(".pin-digit", root);
     const error = $("#pin-error", root);
-    if (!form || inputs.length !== 6) return;
+    const autoSubmit = !opts || opts.autoSubmit !== false;
     let submitting = false;
 
     function digits() {
@@ -581,37 +664,22 @@
       }
       if (i >= 6) inputs[5].focus();
       else if (inputs[i]) inputs[i].focus();
-      if (digits().length === 6) trySubmit();
+      if (autoSubmit && digits().length === 6) trySubmit();
     }
 
     function trySubmit() {
       if (submitting) return;
       const pin = digits();
-      if (pinLockRemaining() > 0) { showLockout(); return; }
+      if (opts && opts.checkLock && pinLockRemaining() > 0) { showLockout(); return; }
       if (pin.length !== 6) {
         setError("Please enter all six digits.");
         return;
       }
+      if (opts && opts.validate && opts.validate(pin, setError) === false) return;
+      if (!opts || !opts.onSubmit) return;
       submitting = true;
-      window.InviteData.loginWithPin(pin).then((res) => {
+      Promise.resolve(opts.onSubmit(pin, setError)).then(() => {
         submitting = false;
-        if (res && res.ok && res.token) {
-          clearPinFailures();
-          persistToken(res.token);
-          const url = new URL(location.href);
-          url.searchParams.set("k", res.token);
-          history.replaceState({ spa: true }, "", url.pathname.split("/").pop() + "?" + url.searchParams.toString() + url.hash);
-          afterPageChange();
-          return;
-        }
-        recordPinFailure();
-        inputs.forEach((el) => { el.value = ""; });
-        if (pinLockRemaining() > 0) {
-          showLockout();
-        } else {
-          setError("That PIN didn’t work. Please try again.");
-          if (inputs[0]) inputs[0].focus();
-        }
       }).catch(() => {
         submitting = false;
         setError("Couldn’t check that just now. Please try again.");
@@ -619,7 +687,7 @@
     }
 
     inputs.forEach((el, i) => {
-      el.addEventListener("input", (e) => {
+      el.addEventListener("input", () => {
         const v = (el.value || "").replace(/\D/g, "");
         if (v.length > 1) {
           el.value = "";
@@ -628,7 +696,7 @@
         }
         el.value = v.slice(-1);
         if (el.value && inputs[i + 1]) inputs[i + 1].focus();
-        if (digits().length === 6) trySubmit();
+        if (autoSubmit && digits().length === 6) trySubmit();
       });
       el.addEventListener("keydown", (e) => {
         if (e.key === "Backspace" && !el.value && i > 0) {
@@ -648,15 +716,126 @@
       el.addEventListener("focus", () => el.select());
     });
 
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      trySubmit();
-    });
+    const form = $("#pin-form", root);
+    if (form) {
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        trySubmit();
+      });
+    }
 
-    if (pinLockRemaining() > 0) showLockout();
+    if (opts && opts.checkLock && pinLockRemaining() > 0) showLockout();
     else if (inputs[0]) inputs[0].focus();
+
+    return { digits, setError, clear() { inputs.forEach((el) => { el.value = ""; }); } };
   }
 
+  function bindBackToNames(root, guests) {
+    const link = $("#pick-another-name", root);
+    if (!link) return;
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      showWhoGrid(root, guests);
+    });
+  }
+
+  function showLoginPin(root, guests, guest) {
+    root.innerHTML = loginPinHtml(guest);
+    bindBackToNames(root, guests);
+    bindPinBoxes(root, {
+      autoSubmit: true,
+      checkLock: true,
+      onSubmit: (pin, setError) => window.InviteData.loginWithPin(guest.id, pin).then((res) => {
+        if (res && res.ok && res.token) {
+          clearPinFailures();
+          startGuestSession(res.token);
+          return;
+        }
+        recordPinFailure();
+        const inputs = $all(".pin-digit", root);
+        inputs.forEach((el) => { el.value = ""; });
+        if (pinLockRemaining() > 0) return;
+        setError((res && res.message) || "That PIN didn’t work. Please try again.");
+        if (inputs[0]) inputs[0].focus();
+      })
+    });
+  }
+
+  function showCreatePin(root, guests, guest, firstPin) {
+    const confirm = !!firstPin;
+    root.innerHTML = createPinHtml(guest, confirm ? "confirm" : "create");
+    bindBackToNames(root, guests);
+    bindPinBoxes(root, {
+      autoSubmit: confirm,
+      validate: (pin, setError) => {
+        if (!confirm && isWeakPin(pin)) {
+          setError("Please pick a harder PIN than a simple sequence or repeated number.");
+          return false;
+        }
+        if (confirm && pin !== firstPin) {
+          setError("Those PINs didn’t match. Please try again.");
+          return false;
+        }
+        return true;
+      },
+      onSubmit: (pin, setError) => {
+        if (!confirm) {
+          if (isWeakPin(pin)) {
+            setError("Please pick a harder PIN than a simple sequence or repeated number.");
+            return;
+          }
+          showCreatePin(root, guests, guest, pin);
+          return;
+        }
+        return window.InviteData.claimGuest(guest.id, pin).then((res) => {
+          if (res && res.ok && res.token) {
+            startGuestSession(res.token);
+            return;
+          }
+          if (res && res.reason === "claimed") {
+            setError(res.message || "That name is already claimed. Log in with your PIN.");
+            return;
+          }
+          setError((res && res.message) || "Couldn’t save that PIN just now. Please try again.");
+        });
+      }
+    });
+  }
+
+  function showConfirmYou(root, guests, guest) {
+    root.innerHTML = confirmYouHtml(guest);
+    $("#confirm-yes", root).addEventListener("click", () => showCreatePin(root, guests, guest));
+    $("#confirm-no", root).addEventListener("click", () => showWhoGrid(root, guests));
+  }
+
+  function showWhoGrid(root, guests) {
+    root.innerHTML = whoGridHtml(guests);
+    $all(".who-tile", root).forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const guest = {
+          id: btn.getAttribute("data-guest-id"),
+          name: btn.getAttribute("data-name") || ""
+        };
+        if (btn.getAttribute("data-claimed") === "1") showLoginPin(root, guests, guest);
+        else showConfirmYou(root, guests, guest);
+      });
+    });
+  }
+
+  function renderClaimGate(root) {
+    root.innerHTML = '<p class="lede" style="text-align:center">Finding everyone…</p>';
+    window.InviteData.listGuestsPublic().then((res) => {
+      if (!res || !res.ok) {
+        root.innerHTML = gateHtml("We can’t open the name list just now.", "Please refresh and try again.") +
+          '<p class="logout-line"><a href="me.html">Try again</a></p>';
+        return;
+      }
+      showWhoGrid(root, res.guests || []);
+    }).catch(() => {
+      root.innerHTML = gateHtml("We can’t open the name list just now.", "Please refresh and try again.") +
+        '<p class="logout-line"><a href="me.html">Try again</a></p>';
+    });
+  }
 
   const CHAT_PROMPTS = ["What size tee?", "Any allergies?", "Wish list?"];
   const CHAT_POLL_MS = 4000;
@@ -906,15 +1085,14 @@
     const data = window.InviteData;
 
     if (!token) {
-      root.innerHTML = pinGateHtml();
-      bindPinForm(root);
+      renderClaimGate(root);
       return;
     }
 
     data.getGuestByToken(token).then((res) => {
       if (!res.ok) {
-        root.innerHTML = gateHtml("We can’t open this personal link.", "Please ask Jack for your invite link, or go back and try your 6-digit PIN.") +
-          '<p class="logout-line"><a href="me.html" id="pin-instead">Enter a PIN instead</a></p>';
+        root.innerHTML = gateHtml("We can’t open this personal link.", "Please go back and pick your name, or ask Jack for help.") +
+          '<p class="logout-line"><a href="me.html" id="pin-instead">Pick your name instead</a></p>';
         const alt = $("#pin-instead", root);
         if (alt) alt.addEventListener("click", logoutGuest);
         return;
@@ -922,7 +1100,7 @@
       const g = res.guest;
       const bringing = g.bringing || { dish: "", category: "Main", notes: "" };
       root.innerHTML = `
-        ${g.token === "demo" ? '<p class="banner-demo">Preview data only — not a real draw. This is Demo Guest.</p>' : ""}
+        ${res.demo || (g.token && String(g.token).indexOf("demo") === 0) ? '<p class="banner-demo">Preview data only — not a real draw.</p>' : ""}
         <p class="hi"><span class="outline-red">Hi, ${escapeHtml(g.name)}</span></p>
         <p class="lede" style="margin-bottom:1.5rem">This page is just for you. Please don’t share your link — it shows your Secret Santa and ugly-tee person.</p>
         <div class="secret-grid">

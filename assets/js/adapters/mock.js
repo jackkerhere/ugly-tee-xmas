@@ -12,10 +12,25 @@
   // Obviously fake preview records — not a real draw.
   const DEMO_GUESTS = {
     demo: {
+      id: "demo",
       token: "demo",
       name: "Demo Guest",
       secretSantaFor: "Demo Friend A",
       uglyTeeFor: "Demo Friend B"
+    },
+    "demo-a": {
+      id: "demo-a",
+      token: "demo-a",
+      name: "Demo Friend A",
+      secretSantaFor: "Demo Friend B",
+      uglyTeeFor: "Demo Guest"
+    },
+    "demo-b": {
+      id: "demo-b",
+      token: "demo-b",
+      name: "Demo Friend B",
+      secretSantaFor: "Demo Guest",
+      uglyTeeFor: "Demo Friend A"
     }
   };
 
@@ -120,6 +135,30 @@
     writeJson(WISH_KEY, map);
   }
 
+
+  const CLAIM_KEY = "uglytee-demo-claims-v1";
+  const WEAK_PINS = {
+    "012345": 1, "123456": 1, "234567": 1, "345678": 1, "456789": 1, "567890": 1,
+    "987654": 1, "876543": 1, "765432": 1, "654321": 1, "543210": 1, "432109": 1,
+    "321098": 1, "210987": 1, "109876": 1, "098765": 1
+  };
+
+  function isWeakPin(digits) {
+    const pin = String(digits || "");
+    if (!/^\d{6}$/.test(pin)) return true;
+    if (/^(.)\1{5}$/.test(pin)) return true;
+    return !!WEAK_PINS[pin];
+  }
+
+  function readClaims() {
+    const stored = readJson(CLAIM_KEY, null);
+    return (stored && typeof stored === "object") ? stored : {};
+  }
+
+  function writeClaims(map) {
+    writeJson(CLAIM_KEY, map);
+  }
+
   function threadKey(token, thread) {
     return String(token || "").trim() + ":" + thread;
   }
@@ -149,13 +188,63 @@
 
   const adapter = {
     name: "mock",
-    // Demo only: PIN 123456 maps to the Demo Guest token. No real PINs.
-    loginWithPin(pin) {
+    listGuestsPublic() {
+      const claims = readClaims();
+      const guests = Object.values(DEMO_GUESTS)
+        .map((g) => ({
+          id: g.id,
+          display_name: g.name,
+          claimed: !!claims[g.id]
+        }))
+        .sort((a, b) => a.display_name.localeCompare(b.display_name));
+      return Promise.resolve({ ok: true, guests });
+    },
+    claimGuest(guestId, pin) {
+      const id = String(guestId || "").trim();
       const digits = String(pin || "").replace(/\D/g, "");
-      if (digits === "123456") {
-        return Promise.resolve({ ok: true, token: "demo" });
+      const guest = DEMO_GUESTS[id];
+      if (!guest) {
+        return Promise.resolve({ ok: false, reason: "not-found", message: "We couldn’t find that guest." });
       }
-      return Promise.resolve({ ok: false, reason: "invalid" });
+      if (isWeakPin(digits)) {
+        return Promise.resolve({
+          ok: false,
+          reason: "weak",
+          message: "Please pick a harder PIN than a simple sequence or repeated number."
+        });
+      }
+      const claims = readClaims();
+      if (claims[id]) {
+        return Promise.resolve({
+          ok: false,
+          reason: "claimed",
+          message: "That name is already claimed. Log in with your PIN."
+        });
+      }
+      claims[id] = digits;
+      writeClaims(claims);
+      return Promise.resolve({ ok: true, token: guest.token });
+    },
+    // Demo only: PINs live in this browser. No real PINs.
+    loginWithPin(guestId, pin) {
+      const id = String(guestId || "").trim();
+      const digits = String(pin || "").replace(/\D/g, "");
+      const guest = DEMO_GUESTS[id];
+      if (!guest) {
+        return Promise.resolve({ ok: false, reason: "not-found", message: "We couldn’t find that guest." });
+      }
+      const claims = readClaims();
+      if (!claims[id]) {
+        return Promise.resolve({
+          ok: false,
+          reason: "unclaimed",
+          message: "That name hasn’t been claimed yet. Create your PIN first."
+        });
+      }
+      if (claims[id] === digits) {
+        return Promise.resolve({ ok: true, token: guest.token });
+      }
+      return Promise.resolve({ ok: false, reason: "invalid", message: "That PIN didn’t work. Please try again." });
     },
     getGuestByToken(token) {
       const key = String(token || "").trim();
