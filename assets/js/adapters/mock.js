@@ -39,6 +39,14 @@
 
   const adapter = {
     name: "mock",
+    // Demo only: PIN 123456 maps to the Demo Guest token. No real PINs.
+    loginWithPin(pin) {
+      const digits = String(pin || "").replace(/\D/g, "");
+      if (digits === "123456") {
+        return Promise.resolve({ ok: true, token: "demo" });
+      }
+      return Promise.resolve({ ok: false, reason: "invalid" });
+    },
     getGuestByToken(token) {
       const key = String(token || "").trim();
       const guest = DEMO_GUESTS[key];

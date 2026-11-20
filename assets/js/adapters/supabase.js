@@ -6,6 +6,10 @@
  * Intended shape once wired (server-side / RLS, never a public list of draws):
  *   getGuestByToken(k)  -> select only the row matching the token
  *                          (name, secret_santa_for, ugly_tee_for, bringing)
+ *   loginWithPin(pin)   -> must run server-side (RPC or edge function).
+ *                          Store only hashed PINs. Rate-limit attempts.
+ *                          Return a token on success, or an error.
+ *                          Never ship guest PINs (or a PIN list) to the client.
  *   saveBringing(k, payload) -> update bringing fields for that token only
  *   listMenuItems()     -> select dish, category, display_name only
  *                          (never draw recipients)
@@ -26,6 +30,7 @@
   const adapter = {
     name: "supabase",
     getGuestByToken: () => notConfigured("getGuestByToken"),
+    loginWithPin: () => notConfigured("loginWithPin"),
     saveBringing: () => notConfigured("saveBringing"),
     clearBringing: () => notConfigured("clearBringing"),
     listMenuItems: () => notConfigured("listMenuItems"),

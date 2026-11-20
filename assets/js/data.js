@@ -29,6 +29,7 @@
     config,
     register,
     getGuestByToken: (token) => current().getGuestByToken(token),
+    loginWithPin: (pin) => current().loginWithPin(pin),
     saveBringing: (token, payload) => current().saveBringing(token, payload),
     clearBringing: (token) => current().clearBringing(token),
     listMenuItems: () => current().listMenuItems(),

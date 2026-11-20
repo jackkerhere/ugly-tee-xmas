@@ -10,8 +10,41 @@
 
   const DEFAULT_GREETING = "A little something for you";
 
+  const STORE_TOKEN = "uglytee-guest-token";
+  const STORE_PIN_TRIES = "uglytee-pin-tries";
+  const STORE_PIN_LOCK = "uglytee-pin-lock-until";
+  const PIN_MAX_TRIES = 5;
+  const PIN_LOCK_MS = 60 * 1000;
+
   function currentToken() {
-    return (new URLSearchParams(location.search).get("k") || "").trim();
+    const fromUrl = (new URLSearchParams(location.search).get("k") || "").trim();
+    if (fromUrl) return fromUrl;
+    try { return (sessionStorage.getItem(STORE_TOKEN) || "").trim(); }
+    catch { return ""; }
+  }
+
+  function persistToken(token) {
+    const k = String(token || "").trim();
+    try {
+      if (k) sessionStorage.setItem(STORE_TOKEN, k);
+      else sessionStorage.removeItem(STORE_TOKEN);
+    } catch (_) { /* ignore */ }
+  }
+
+  function logoutGuest(e) {
+    if (e) e.preventDefault();
+    persistToken("");
+    const url = new URL("me.html", location.href);
+    url.searchParams.delete("k");
+    // Drop the query entirely if it is now empty
+    const next = url.pathname.split("/").pop() + (url.search || "");
+    if (location.pathname.endsWith("me.html") || /me\.html$/i.test(location.pathname)) {
+      history.replaceState({ spa: true }, "", next || "me.html");
+      renderGuestPage();
+      carryTokenInLinks();
+      return;
+    }
+    location.href = next || "me.html";
   }
 
   function withToken(href) {
@@ -402,27 +435,6 @@
   window.InvitePlayer = { tryPlay: startSongFromGesture };
 
 
-  function mapDialog() {
-    const openers = $all("[data-open-map]");
-    const backdrop = $("#map-dialog");
-    if (!openers.length || !backdrop) return;
-    const closeBtn = $("[data-close-map]", backdrop);
-    function open(e) {
-      e.preventDefault();
-      backdrop.classList.add("is-on");
-      backdrop.setAttribute("aria-hidden", "false");
-      if (closeBtn) closeBtn.focus();
-    }
-    function close() {
-      backdrop.classList.remove("is-on");
-      backdrop.setAttribute("aria-hidden", "true");
-    }
-    openers.forEach((el) => el.addEventListener("click", open));
-    if (closeBtn) closeBtn.addEventListener("click", close);
-    backdrop.addEventListener("click", (e) => { if (e.target === backdrop) close(); });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
-  }
-
   function renderMenu() {
     const root = $("#menu-root");
     if (!root || !globalInvite()) return;
@@ -469,21 +481,192 @@
     });
   }
 
+  function pinLockRemaining() {
+    try {
+      const until = parseInt(sessionStorage.getItem(STORE_PIN_LOCK) || "0", 10);
+      const left = until - Date.now();
+      return left > 0 ? left : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  function recordPinFailure() {
+    try {
+      const tries = parseInt(sessionStorage.getItem(STORE_PIN_TRIES) || "0", 10) + 1;
+      sessionStorage.setItem(STORE_PIN_TRIES, String(tries));
+      if (tries >= PIN_MAX_TRIES) {
+        sessionStorage.setItem(STORE_PIN_LOCK, String(Date.now() + PIN_LOCK_MS));
+        sessionStorage.setItem(STORE_PIN_TRIES, "0");
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  function clearPinFailures() {
+    try {
+      sessionStorage.removeItem(STORE_PIN_TRIES);
+      sessionStorage.removeItem(STORE_PIN_LOCK);
+    } catch (_) { /* ignore */ }
+  }
+
+  function pinGateHtml() {
+    const boxes = Array.from({ length: 6 }, (_, i) =>
+      `<input class="pin-digit" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="${i === 0 ? "one-time-code" : "off"}" aria-label="PIN digit ${i + 1}" data-index="${i}">`
+    ).join("");
+    return `
+      <div class="pin-gate">
+        <div class="card">
+          <h1 class="outline-red" style="-webkit-text-stroke:4px #fff">Welcome</h1>
+          <p class="pin-lead">This page is private. Enter your 6-digit PIN to open it.</p>
+          <form id="pin-form" action="#" novalidate>
+            <div class="pin-boxes" role="group" aria-label="Six-digit PIN">${boxes}</div>
+            <p class="pin-error" id="pin-error" hidden></p>
+            <p style="margin-top:1rem"><button class="btn btn-gold" type="submit">Open my page</button></p>
+          </form>
+        </div>
+      </div>`;
+  }
+
+  function bindPinForm(root) {
+    const form = $("#pin-form", root);
+    const inputs = $all(".pin-digit", root);
+    const error = $("#pin-error", root);
+    if (!form || inputs.length !== 6) return;
+    let submitting = false;
+
+    function digits() {
+      return inputs.map((el) => (el.value || "").replace(/\D/g, "").slice(0, 1)).join("");
+    }
+
+    function setError(msg) {
+      if (!error) return;
+      if (!msg) { error.hidden = true; error.textContent = ""; return; }
+      error.hidden = false;
+      error.textContent = msg;
+    }
+
+    function showLockout() {
+      const tick = () => {
+        const left = pinLockRemaining();
+        if (left <= 0) {
+          setError("");
+          inputs.forEach((el) => { el.disabled = false; });
+          if (inputs[0]) inputs[0].focus();
+          return;
+        }
+        const secs = Math.ceil(left / 1000);
+        setError("A few too many tries. Please wait " + secs + " second" + (secs === 1 ? "" : "s") + " and try again.");
+        inputs.forEach((el) => { el.disabled = true; });
+        setTimeout(tick, 250);
+      };
+      tick();
+    }
+
+    function fillFrom(text, start) {
+      const nums = String(text || "").replace(/\D/g, "");
+      if (!nums) return;
+      let i = start;
+      for (const ch of nums) {
+        if (i >= 6) break;
+        inputs[i].value = ch;
+        i += 1;
+      }
+      if (i >= 6) inputs[5].focus();
+      else if (inputs[i]) inputs[i].focus();
+      if (digits().length === 6) trySubmit();
+    }
+
+    function trySubmit() {
+      if (submitting) return;
+      const pin = digits();
+      if (pinLockRemaining() > 0) { showLockout(); return; }
+      if (pin.length !== 6) {
+        setError("Please enter all six digits.");
+        return;
+      }
+      submitting = true;
+      window.InviteData.loginWithPin(pin).then((res) => {
+        submitting = false;
+        if (res && res.ok && res.token) {
+          clearPinFailures();
+          persistToken(res.token);
+          const url = new URL(location.href);
+          url.searchParams.set("k", res.token);
+          history.replaceState({ spa: true }, "", url.pathname.split("/").pop() + "?" + url.searchParams.toString() + url.hash);
+          afterPageChange();
+          return;
+        }
+        recordPinFailure();
+        inputs.forEach((el) => { el.value = ""; });
+        if (pinLockRemaining() > 0) {
+          showLockout();
+        } else {
+          setError("That PIN didn’t work. Please try again.");
+          if (inputs[0]) inputs[0].focus();
+        }
+      }).catch(() => {
+        submitting = false;
+        setError("Couldn’t check that just now. Please try again.");
+      });
+    }
+
+    inputs.forEach((el, i) => {
+      el.addEventListener("input", (e) => {
+        const v = (el.value || "").replace(/\D/g, "");
+        if (v.length > 1) {
+          el.value = "";
+          fillFrom(v, i);
+          return;
+        }
+        el.value = v.slice(-1);
+        if (el.value && inputs[i + 1]) inputs[i + 1].focus();
+        if (digits().length === 6) trySubmit();
+      });
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Backspace" && !el.value && i > 0) {
+          inputs[i - 1].focus();
+          inputs[i - 1].value = "";
+          e.preventDefault();
+        }
+        if (e.key === "ArrowLeft" && i > 0) { inputs[i - 1].focus(); e.preventDefault(); }
+        if (e.key === "ArrowRight" && inputs[i + 1]) { inputs[i + 1].focus(); e.preventDefault(); }
+      });
+      el.addEventListener("paste", (e) => {
+        const text = (e.clipboardData || window.clipboardData).getData("text") || "";
+        if (!/\d/.test(text)) return;
+        e.preventDefault();
+        fillFrom(text, 0);
+      });
+      el.addEventListener("focus", () => el.select());
+    });
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      trySubmit();
+    });
+
+    if (pinLockRemaining() > 0) showLockout();
+    else if (inputs[0]) inputs[0].focus();
+  }
+
   function renderGuestPage() {
     const root = $("#me-root");
     if (!root || !globalInvite()) return;
-    const params = new URLSearchParams(location.search);
-    const token = (params.get("k") || "").trim();
+    const token = currentToken();
     const data = window.InviteData;
 
     if (!token) {
-      root.innerHTML = gateHtml("This is a private page for each guest.", "Open the personal link that was sent to you. It looks like me.html?k=… — there’s no password.");
+      root.innerHTML = pinGateHtml();
+      bindPinForm(root);
       return;
     }
 
     data.getGuestByToken(token).then((res) => {
       if (!res.ok) {
-        root.innerHTML = gateHtml("We can’t open this personal link.", "Please ask Jack for your invite link. There’s no password — the link itself is the key.");
+        root.innerHTML = gateHtml("We can’t open this personal link.", "Please ask Jack for your invite link, or go back and try your 6-digit PIN.") +
+          '<p class="logout-line"><a href="me.html" id="pin-instead">Enter a PIN instead</a></p>';
+        const alt = $("#pin-instead", root);
+        if (alt) alt.addEventListener("click", logoutGuest);
         return;
       }
       const g = res.guest;
@@ -525,7 +708,10 @@
           </div>
           <p class="form-status" id="form-status" hidden></p>
         </form>
+        <p class="logout-line"><a href="me.html" id="logout-link">Not you? Log out</a></p>
       `;
+      const logout = $("#logout-link", root);
+      if (logout) logout.addEventListener("click", logoutGuest);
       const form = $("#bringing-form");
       const status = $("#form-status");
       form.addEventListener("submit", (e) => {
@@ -598,7 +784,6 @@
     carryTokenInLinks();
     personalizeGift();
     applyGiftVisibility();
-    mapDialog();
     reveals();
     renderMenu();
     renderGuestPage();
@@ -610,9 +795,6 @@
     if (!wrap) return;
     if (!$("#gift-screen") && doc.querySelector("#gift-screen")) {
       wrap.insertBefore(doc.querySelector("#gift-screen"), wrap.firstChild);
-    }
-    if (!$("#map-dialog") && doc.querySelector("#map-dialog")) {
-      wrap.appendChild(doc.querySelector("#map-dialog"));
     }
   }
 
@@ -677,7 +859,6 @@
     personalizeGift();
     player();
     giftGate();
-    mapDialog();
     reveals();
     renderMenu();
     renderGuestPage();
