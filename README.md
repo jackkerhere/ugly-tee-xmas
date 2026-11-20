@@ -46,6 +46,8 @@ This only clears the PIN so they can claim their name again. It is not exposed t
 
 ## Temporary test guests
 
+The “Who are you?” grid shows each guest’s portrait (Jack’s drawings) with the name under it. Claimed names are dimmed with a small lock. Temporary test names use a generic elf placeholder.
+
 Two temporary names, Test Elf 1 and Test Elf 2, may appear at the bottom of the My page grid (marked “test”) so Jack can try two accounts. They have their own draw rows only; real guests are not changed.
 
 When testing is finished, Chris can remove them from the Supabase SQL editor (do not run this until Jack is done):

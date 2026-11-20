@@ -551,12 +551,43 @@
     return '<p class="logout-line"><a href="me.html" id="pick-another-name">Choose a different name</a></p>';
   }
 
+  const FACE_SLUGS = {
+    andrea: 1, brenda: 1, dharshen: 1, "hui-yi": 1, jack: 1, "jian-han": 1,
+    jon: 1, megan: 1, michelle: 1, stuart: 1, thivya: 1, "yen-ting": 1,
+    "yi-jia": 1, "zhen-yang": 1
+  };
+
+  function guestSlug(name) {
+    return String(name || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+
+  function guestFaceHtml(name, opts) {
+    opts = opts || {};
+    const slug = guestSlug(name);
+    const wrapClass = "who-face-wrap" + (opts.className ? " " + opts.className : "");
+    if (!FACE_SLUGS[slug]) {
+      return `<span class="${wrapClass}"><span class="who-face is-placeholder" aria-hidden="true">🧝</span></span>`;
+    }
+    const sizes = opts.sizes || "(min-width: 1280px) 180px, (min-width: 800px) 22vw, 42vw";
+    const base = "assets/faces/" + slug;
+    const lock = opts.claimed ? '<span class="who-lock" aria-hidden="true">🔒</span>' : "";
+    const alt = name ? escapeAttr(name) : "";
+    return `<span class="${wrapClass}">
+      <picture class="who-face">
+        <source type="image/webp" srcset="${base}.webp 240w, ${base}-480.webp 480w" sizes="${sizes}">
+        <img src="${base}.jpg" srcset="${base}.jpg 240w, ${base}-480.jpg 480w" sizes="${sizes}" width="240" height="240" alt="${alt}" decoding="async">
+      </picture>
+      ${lock}
+    </span>`;
+  }
+
   function whoGridHtml(guests) {
     const tiles = (guests || []).map((g) => {
       const claimed = !!g.claimed;
       const isTest = !!g.is_test;
       const name = g.display_name || g.name || "";
       return `<button type="button" class="who-tile${claimed ? " is-claimed" : ""}${isTest ? " is-test" : ""}" data-guest-id="${escapeAttr(g.id)}" data-claimed="${claimed ? "1" : "0"}" data-name="${escapeAttr(name)}">
+        ${guestFaceHtml(name, { claimed })}
         <span class="who-name">${escapeHtml(name)}</span>
         ${isTest ? '<span class="who-test">test</span>' : ""}
         ${claimed ? '<span class="who-claimed">Claimed — log in with your PIN</span>' : ""}
@@ -577,6 +608,7 @@
     return `
       <div class="pin-gate">
         <div class="card">
+          ${guestFaceHtml(guest.name, { className: "is-large", sizes: "176px" })}
           <h1 class="outline-red" style="-webkit-text-stroke:4px #fff">Are you ${escapeHtml(guest.name)}?</h1>
           <p class="pin-lead">Only claim this name if it is you. Your page is private once it is locked to your PIN.</p>
           <div class="form-actions" style="justify-content:center;margin-top:1.2rem">
@@ -609,6 +641,7 @@
     return `
       <div class="pin-gate">
         <div class="card">
+          ${guestFaceHtml(guest.name, { className: "is-large", sizes: "176px" })}
           <h1 class="outline-red" style="-webkit-text-stroke:4px #fff">Welcome back, ${escapeHtml(guest.name)}</h1>
           <p class="pin-lead">Enter your 6-digit PIN to open your page.</p>
           <form id="pin-form" action="#" novalidate>
@@ -1103,7 +1136,7 @@
       const bringing = g.bringing || { dish: "", category: "Main", notes: "" };
       root.innerHTML = `
         ${res.demo || (g.token && String(g.token).indexOf("demo") === 0) ? '<p class="banner-demo">Preview data only — not a real draw.</p>' : ""}
-        <p class="hi"><span class="outline-red">Hi, ${escapeHtml(g.name)}</span></p>
+        <p class="hi">${guestFaceHtml(g.name, { className: "is-large", sizes: "124px" })}<span class="outline-red">Hi, ${escapeHtml(g.name)}</span></p>
         <p class="lede" style="margin-bottom:1.5rem">This page is just for you. Please don’t share your link — it shows your Secret Santa and ugly-tee person.</p>
         <div class="secret-grid">
           <article class="card secret-card reveal">
