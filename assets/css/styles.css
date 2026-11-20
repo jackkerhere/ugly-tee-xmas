@@ -183,6 +183,27 @@ h1, h2, h3, .display {
   outline: 3px solid var(--gold-bright);
   outline-offset: 3px;
 }
+.nav-unread {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  margin-left: 6px;
+  padding: 0 0.28rem;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 0 2px rgba(11, 20, 51, 0.35);
+}
+.nav-unread[hidden] { display: none; }
+.site-nav a[aria-current="page"] .nav-unread {
+  box-shadow: 0 0 0 2px #fff;
+}
 .soon {
   display: inline-block;
   margin-left: 6px;
@@ -980,6 +1001,14 @@ body.has-me-subnav main.section { padding-top: 0.75rem; }
   max-width: 11rem;
   margin: 0 auto 0.85rem;
 }
+.person-card .hint {
+  margin: 0.7rem auto 0;
+  max-width: 22rem;
+  text-align: left;
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
 
 .budget-badge {
   display: inline-block;
@@ -1015,6 +1044,7 @@ body.has-me-subnav main.section { padding-top: 0.75rem; }
   max-width: 100%;
 }
 .chat-tab {
+  position: relative;
   min-width: 0;
   min-height: 48px;
   padding: 0.55rem 0.45rem;
@@ -1034,6 +1064,29 @@ body.has-me-subnav main.section { padding-top: 0.75rem; }
 }
 .chat-tab:hover { transform: translateY(-1px); border-color: var(--gold); }
 .chat-tab:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.chat-tab-badge,
+.me-tab-badge {
+  position: absolute;
+  top: 0.12rem;
+  right: 0.12rem;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  padding: 0 0.28rem;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px #fff;
+  z-index: 1;
+}
+.chat-tab-badge[hidden],
+.me-tab-badge[hidden] { display: none; }
 .chat-tab[aria-selected="true"] {
   background: linear-gradient(180deg, var(--gold-bright), var(--gold));
   border-color: #8a6a1e;

@@ -14,7 +14,6 @@
   const STORE_PIN_TRIES = "uglytee-pin-tries";
   const STORE_PIN_LOCK = "uglytee-pin-lock-until";
   const STORE_ME_TAB = "uglytee-me-subtab";
-  const STORE_CHAT_READ = "uglytee-chat-read-v1";
   const PIN_MAX_TRIES = 5;
   const PIN_LOCK_MS = 60 * 1000;
 
@@ -921,7 +920,7 @@
       <section class="ss-chat" aria-label="Secret Santa chat">
         <div class="section-head" style="margin-top:2rem;margin-bottom:1rem">
           <div class="cloud-title"><h2>Secret Santa chat</h2></div>
-          <p class="lede">Two private threads. The person you’re buying a gift for never sees your name — you show up as 🎅 Your Secret Santa.</p>
+          <p class="lede">These chats are private. The person you’re buying for never sees your name — you show up as 🎅 "Your Secret Santa".</p>
         </div>
         <form class="card form wishlist-card reveal" id="wishlist-form">
           <h3>My wish list (your Secret Santa sees this)</h3>
@@ -935,8 +934,8 @@
         </form>
         <div class="card chat-panel reveal" style="margin-top:1.1rem">
           <div class="chat-tabs" role="tablist" aria-label="Secret Santa threads">
-            <button type="button" class="chat-tab" role="tab" id="tab-giftee" aria-controls="chat-log" aria-selected="true" data-thread="giftee">Chat with ${escapeHtml(g.secretSantaFor)} (you’re their Santa)</button>
-            <button type="button" class="chat-tab" role="tab" id="tab-santa" aria-controls="chat-log" aria-selected="false" data-thread="santa">Chat with your Secret Santa (who has you)</button>
+            <button type="button" class="chat-tab" role="tab" id="tab-giftee" aria-controls="chat-log" aria-selected="true" data-thread="giftee">Chat with ${escapeHtml(g.secretSantaFor)} (you’re their Santa)<span class="chat-tab-badge" id="chat-unread-giftee" hidden></span></button>
+            <button type="button" class="chat-tab" role="tab" id="tab-santa" aria-controls="chat-log" aria-selected="false" data-thread="santa">Chat with your Secret Santa (who has you)<span class="chat-tab-badge" id="chat-unread-santa" hidden></span></button>
           </div>
           <div class="chat-peer" id="chat-peer"></div>
           <div class="chat-log" id="chat-log" role="log" aria-live="polite" aria-relevant="additions"></div>
@@ -1053,9 +1052,12 @@
         }
         if (messages.length) {
           chatCtx.lastAt = messages[messages.length - 1].createdAt;
-          markThreadRead(token, thread, chatCtx.lastAt);
         }
-        refreshSantaUnread(root, token, guest);
+        if (isChatVisible(root, thread)) {
+          markChatRead(token, thread).then(refreshUnreadCounts);
+        } else {
+          refreshUnreadCounts();
+        }
       });
     }
 
@@ -1110,8 +1112,11 @@
         if (empty) empty.remove();
         appendChatMessages(log, [out.message], true);
         chatCtx.lastAt = out.message.createdAt;
-        markThreadRead(token, thread, chatCtx.lastAt);
-        refreshSantaUnread(root, token, guest);
+        if (isChatVisible(root, thread)) {
+          markChatRead(token, thread).then(refreshUnreadCounts);
+        } else {
+          refreshUnreadCounts();
+        }
       });
     });
 
@@ -1132,9 +1137,15 @@
 
 
   const ME_TAB_IDS = { "ugly-tee": true, santa: true, bring: true };
+  const UNREAD_POLL_MS = 20000;
+  let unreadPollTimer = null;
+  let unreadFocusBound = false;
+  let baseDocTitle = "";
 
   function normalizeMeTab(raw) {
-    return ME_TAB_IDS[String(raw || "").replace(/^#/, "").trim()] ? String(raw || "").replace(/^#/, "").trim() : "";
+    const v = String(raw || "").replace(/^#/, "").trim();
+    if (v === "potluck" || v === "bring") return "bring";
+    return ME_TAB_IDS[v] ? v : "";
   }
 
   function readMeTab() {
@@ -1150,73 +1161,114 @@
   function persistMeTab(tab) {
     const chosen = normalizeMeTab(tab) || "ugly-tee";
     try { sessionStorage.setItem(STORE_ME_TAB, chosen); } catch (_) { /* ignore */ }
-    const next = "#" + chosen;
-    if (location.hash !== next) {
-      history.replaceState(history.state || { spa: true }, "", location.pathname + location.search + next);
-    }
+    const hashId = chosen === "bring" ? "potluck" : chosen;
+    const next = "#" + hashId;
+    const currentHash = location.hash;
+    if (currentHash === next) return;
+    if (chosen === "bring" && currentHash === "#bring") return;
+    history.replaceState(history.state || { spa: true }, "", location.pathname + location.search + next);
   }
 
-  function readChatMarks(token) {
-    try {
-      const all = JSON.parse(sessionStorage.getItem(STORE_CHAT_READ) || "{}");
-      const row = (all && all[String(token)]) || {};
-      return { giftee: row.giftee || "", santa: row.santa || "" };
-    } catch (_) {
-      return { giftee: "", santa: "" };
-    }
+  function tokenFromCtx() {
+    return (chatCtx && chatCtx.token) || currentToken();
   }
 
-  function writeChatMarks(token, marks) {
-    try {
-      const all = JSON.parse(sessionStorage.getItem(STORE_CHAT_READ) || "{}");
-      all[String(token)] = { giftee: (marks && marks.giftee) || "", santa: (marks && marks.santa) || "" };
-      sessionStorage.setItem(STORE_CHAT_READ, JSON.stringify(all));
-    } catch (_) { /* ignore */ }
+  function isChatVisible(root, thread) {
+    if (!root || !thread) return false;
+    if (root.getAttribute("data-me-tab") !== "santa") return false;
+    return !!(chatCtx && chatCtx.thread === thread);
   }
 
-  function markThreadRead(token, thread, lastAt) {
-    if (!token || !lastAt || (thread !== "giftee" && thread !== "santa")) return;
-    const marks = readChatMarks(token);
-    if (!marks[thread] || lastAt > marks[thread]) {
-      marks[thread] = lastAt;
-      writeChatMarks(token, marks);
-    }
-  }
-
-  function updateSantaBadge(root, count) {
-    const badge = $("#santa-unread", root);
-    if (!badge) return;
-    const n = Number(count) || 0;
-    if (n > 0) {
-      badge.hidden = false;
-      badge.textContent = n > 9 ? "9+" : String(n);
+  function setBadgeEl(el, n) {
+    if (!el) return;
+    const count = Number(n) || 0;
+    if (count > 0) {
+      el.hidden = false;
+      el.textContent = count > 9 ? "9+" : String(count);
     } else {
-      badge.hidden = true;
-      badge.textContent = "";
+      el.hidden = true;
+      el.textContent = "";
     }
   }
 
-  function refreshSantaUnread(root, token, guest) {
-    if (!root || !token || !window.InviteData) return Promise.resolve();
-    const marks = readChatMarks(token);
-    const viewing = root.getAttribute("data-me-tab") === "santa" && chatCtx ? chatCtx.thread : "";
-    return Promise.all([
-      window.InviteData.listMessages(token, "giftee", marks.giftee || ""),
-      window.InviteData.listMessages(token, "santa", marks.santa || "")
-    ]).then((rows) => {
-      let total = 0;
-      ["giftee", "santa"].forEach((thread, i) => {
-        const res = rows[i] || {};
-        const messages = res.ok ? (res.messages || []) : [];
-        if (viewing === thread) {
-          const last = messages.length ? messages[messages.length - 1].createdAt : "";
-          if (last) markThreadRead(token, thread, last);
-        } else {
-          total += messages.filter((m) => !m.fromMe).length;
-        }
-      });
-      updateSantaBadge(root, total);
+  function rememberBaseTitle(title) {
+    const raw = String(title || document.title || "");
+    baseDocTitle = raw.replace(/^\(\d+\+?\)\s+/, "");
+  }
+
+  function ensureNavUnread() {
+    $all(".site-nav a").forEach((a) => {
+      const href = a.getAttribute("href") || "";
+      if (pageKey(href) !== "me") return;
+      if ($(".nav-unread", a)) return;
+      const span = document.createElement("span");
+      span.className = "nav-unread";
+      span.hidden = true;
+      const soon = $(".soon", a);
+      if (soon) a.insertBefore(span, soon);
+      else a.appendChild(span);
+    });
+  }
+
+  function applyUnreadChrome(counts) {
+    const ok = !!(counts && counts.ok);
+    const giftee = ok ? (Number(counts.giftee) || 0) : 0;
+    const santa = ok ? (Number(counts.santa) || 0) : 0;
+    const total = ok ? (counts.total != null ? Number(counts.total) || 0 : giftee + santa) : 0;
+    setBadgeEl($("#santa-unread"), total);
+    setBadgeEl($("#chat-unread-giftee"), giftee);
+    setBadgeEl($("#chat-unread-santa"), santa);
+    ensureNavUnread();
+    $all(".nav-unread").forEach((el) => setBadgeEl(el, total));
+    if (!baseDocTitle) rememberBaseTitle(document.title);
+    document.title = total > 0
+      ? "(" + (total > 9 ? "9+" : String(total)) + ") " + baseDocTitle
+      : baseDocTitle;
+  }
+
+  function refreshUnreadCounts() {
+    const token = currentToken();
+    const api = window.InviteData;
+    if (!token || !api || !api.unreadCounts) {
+      applyUnreadChrome({ ok: true, giftee: 0, santa: 0, total: 0 });
+      return Promise.resolve();
+    }
+    return api.unreadCounts(token).then((res) => {
+      applyUnreadChrome(res && res.ok ? res : { ok: true, giftee: 0, santa: 0, total: 0 });
     }).catch(() => {});
+  }
+
+  function markChatRead(token, thread) {
+    const api = window.InviteData;
+    if (!token || !thread || !api || !api.markRead) return Promise.resolve();
+    return api.markRead(token, thread).catch(() => {});
+  }
+
+  function markVisibleChatRead(root) {
+    const token = tokenFromCtx();
+    const thread = chatCtx && chatCtx.thread;
+    if (!isChatVisible(root, thread) || !token) return Promise.resolve();
+    return markChatRead(token, thread).then(refreshUnreadCounts);
+  }
+
+  function stopUnreadPoll() {
+    if (unreadPollTimer) {
+      clearInterval(unreadPollTimer);
+      unreadPollTimer = null;
+    }
+  }
+
+  function startUnreadPoll() {
+    stopUnreadPoll();
+    refreshUnreadCounts();
+    unreadPollTimer = setInterval(refreshUnreadCounts, UNREAD_POLL_MS);
+    if (!unreadFocusBound) {
+      unreadFocusBound = true;
+      window.addEventListener("focus", () => { refreshUnreadCounts(); });
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") refreshUnreadCounts();
+      });
+    }
   }
 
   function showMeTab(root, tab, opts) {
@@ -1231,15 +1283,8 @@
       panel.hidden = panel.id !== "me-panel-" + chosen;
     });
     if (!opts || opts.persist !== false) persistMeTab(chosen);
-    if (chosen === "santa" && tokenFromCtx()) {
-      const token = tokenFromCtx();
-      if (chatCtx && chatCtx.thread && chatCtx.lastAt) markThreadRead(token, chatCtx.thread, chatCtx.lastAt);
-      refreshSantaUnread(root, token, chatCtx && chatCtx.guest);
-    }
-  }
-
-  function tokenFromCtx() {
-    return (chatCtx && chatCtx.token) || currentToken();
+    if (chosen === "santa") markVisibleChatRead(root);
+    else refreshUnreadCounts();
   }
 
   function bindMeSubtabs(root, token, guest) {
@@ -1247,7 +1292,7 @@
     $all(".me-tab", root).forEach((btn) => {
       btn.addEventListener("click", () => showMeTab(root, btn.getAttribute("data-me-tab")));
     });
-    refreshSantaUnread(root, token, guest);
+    refreshUnreadCounts();
   }
 
   function renderGuestPage() {
@@ -1279,18 +1324,18 @@
           <div class="me-segments">
             <button type="button" class="me-tab" role="tab" id="me-tab-ugly-tee" data-me-tab="ugly-tee" aria-controls="me-panel-ugly-tee" aria-selected="true">Ugly Tee</button>
             <button type="button" class="me-tab" role="tab" id="me-tab-santa" data-me-tab="santa" aria-controls="me-panel-santa" aria-selected="false">Secret Santa<span class="me-tab-badge" id="santa-unread" hidden></span></button>
-            <button type="button" class="me-tab" role="tab" id="me-tab-bring" data-me-tab="bring" aria-controls="me-panel-bring" aria-selected="false">What I’m bringing</button>
+            <button type="button" class="me-tab" role="tab" id="me-tab-bring" data-me-tab="bring" aria-controls="me-panel-bring" aria-selected="false">Potluck</button>
           </div>
         </div>
         ${res.demo || (g.token && String(g.token).indexOf("demo") === 0) ? '<p class="banner-demo">Preview data only — not a real draw.</p>' : ""}
         <p class="hi">${guestFaceHtml(g.name, { className: "is-large", sizes: "124px" })}<span class="outline-red">Hi, ${escapeHtml(g.name)}</span></p>
-        <p class="lede me-lede">This page is just for you. Please don’t share your link.</p>
+        <p class="lede me-lede">This page is just for you. Please don’t share your PIN — it shows your Secret Santa and ugly-tee person.</p>
         <section class="me-panel" id="me-panel-ugly-tee" role="tabpanel" aria-labelledby="me-tab-ugly-tee">
           <article class="card secret-card person-card reveal">
             ${guestFaceHtml(g.uglyTeeFor, { className: "is-large", sizes: "176px" })}
             <h3>You’re getting an ugly tee for:</h3>
             <p class="for">${escapeHtml(g.uglyTeeFor)}</p>
-            <p class="hint">Keep it a surprise until the exchange.</p>
+            <p class="hint">It’s a free-for-all! You pick the tee your person wears to the party: the size, the design, how ugly it gets. Go wild. They have to wear it. 🎄</p>
           </article>
         </section>
         <section class="me-panel" id="me-panel-santa" role="tabpanel" aria-labelledby="me-tab-santa" hidden>
@@ -1304,7 +1349,7 @@
         </section>
         <section class="me-panel" id="me-panel-bring" role="tabpanel" aria-labelledby="me-tab-bring" hidden>
         <form class="card form reveal" id="bringing-form">
-          <h3>What I’m bringing</h3>
+          <h3>Potluck</h3>
           <p>This is a potluck. Your dish will appear on the Menu tab.</p>
           <label for="dish">Dish</label>
           <input id="dish" name="dish" type="text" maxlength="80" required placeholder="Add your dish (or leave a placeholder for now)" value="${escapeAttr(bringing.dish || "")}">
@@ -1411,6 +1456,7 @@
     renderMenu();
     renderGuestPage();
     bindPlayerControls();
+    startUnreadPoll();
   }
 
   function ensureHomeChrome(doc) {
@@ -1442,6 +1488,7 @@
     ensureHomeChrome(doc);
     oldMain.replaceWith(newMain);
     document.title = doc.title;
+    rememberBaseTitle(doc.title);
     const keepOpen = storeOn(STORE_OPENED) || document.body.classList.contains("is-open");
     document.body.className = doc.body.className;
     if (keepOpen) document.body.classList.add("is-open");
@@ -1483,6 +1530,7 @@
     if (params.get("shot") === "1") {
       document.documentElement.classList.add("is-shot");
     }
+    rememberBaseTitle(document.title);
     buildStars();
     buildSnow();
     carryTokenInLinks();
@@ -1493,5 +1541,6 @@
     renderMenu();
     renderGuestPage();
     spaNavigate();
+    startUnreadPoll();
   });
 })();

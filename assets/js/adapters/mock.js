@@ -8,6 +8,7 @@
   const STORAGE_KEY = "uglytee-demo-bringing-v1";
   const MSG_KEY = "uglytee-demo-messages-v1";
   const WISH_KEY = "uglytee-demo-wishlist-v1";
+  const READ_KEY = "uglytee-demo-chat-read-v1";
 
   // Obviously fake preview records — not a real draw.
   const DEMO_GUESTS = {
@@ -157,6 +158,15 @@
 
   function writeClaims(map) {
     writeJson(CLAIM_KEY, map);
+  }
+
+  function readChatReads() {
+    const stored = readJson(READ_KEY, {});
+    return (stored && typeof stored === "object") ? stored : {};
+  }
+
+  function writeChatReads(map) {
+    writeJson(READ_KEY, map);
   }
 
   function threadKey(token, thread) {
@@ -370,6 +380,41 @@
       else delete wishes[key];
       writeWishlists(wishes);
       return Promise.resolve({ ok: true, text: body });
+    },
+    unreadCounts(token) {
+      const key = String(token || "").trim();
+      if (!DEMO_GUESTS[key]) {
+        return Promise.resolve({ ok: false, reason: "not-found" });
+      }
+      const marks = readChatReads()[key] || {};
+      const countThread = (thread) => {
+        const all = readMessages()[threadKey(key, thread)] || [];
+        const last = marks[thread] || "";
+        return all.filter((m) => {
+          const fromMe =
+            (thread === "giftee" && m.senderRole === "santa") ||
+            (thread === "santa" && m.senderRole === "giftee");
+          return !fromMe && (!last || String(m.createdAt) > String(last));
+        }).length;
+      };
+      const giftee = countThread("giftee");
+      const santa = countThread("santa");
+      return Promise.resolve({ ok: true, giftee, santa, total: giftee + santa });
+    },
+    markRead(token, thread) {
+      const key = String(token || "").trim();
+      if (!DEMO_GUESTS[key]) {
+        return Promise.resolve({ ok: false, reason: "not-found" });
+      }
+      if (thread !== "giftee" && thread !== "santa") {
+        return Promise.resolve({ ok: false, reason: "invalid", message: "Unknown thread." });
+      }
+      const all = readChatReads();
+      const row = all[key] || {};
+      row[thread] = new Date().toISOString();
+      all[key] = row;
+      writeChatReads(all);
+      return Promise.resolve({ ok: true, thread });
     }
   };
 

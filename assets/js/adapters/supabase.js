@@ -113,6 +113,15 @@
         token: String(token || "").trim(),
         body: text
       });
+    },
+    unreadCounts(token) {
+      return rpc("unread_counts", { token: String(token || "").trim() });
+    },
+    markRead(token, thread) {
+      return rpc("mark_read", {
+        token: String(token || "").trim(),
+        thread
+      });
     }
   };
 

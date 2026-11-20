@@ -44,7 +44,9 @@
     listMessages: (token, thread, since) => current().listMessages(token, thread, since),
     sendMessage: (token, thread, text) => current().sendMessage(token, thread, text),
     getWishlist: (token, scope) => current().getWishlist(token, scope),
-    setWishlist: (token, text) => current().setWishlist(token, text)
+    setWishlist: (token, text) => current().setWishlist(token, text),
+    unreadCounts: (token) => current().unreadCounts(token),
+    markRead: (token, thread) => current().markRead(token, thread)
   };
 
   global.InviteData = api;
