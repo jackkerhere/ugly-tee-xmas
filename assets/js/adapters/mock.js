@@ -415,9 +415,24 @@
       all[key] = row;
       writeChatReads(all);
       return Promise.resolve({ ok: true, thread });
-    }
+    },
+    gamePublic() {
+      return Promise.resolve({ ok: true, phase: "not_started", dealt: false, players: [], title: "Who Stole Christmas?", reveal: { active: false } });
+    },
+    gameMe() {
+      return Promise.resolve({ ok: true, phase: "not_started", dealt: false, isPlayer: false, isHost: false, players: [], reveal: { active: false } });
+    },
+    gameSubmit() { return Promise.resolve({ ok: false, reason: "invalid", message: "Preview only — start a live game to play." }); },
+    gameClaimHost() { return Promise.resolve({ ok: false, reason: "invalid", message: "Host tools are live-only. Take ?demo=1 off." }); },
+    gameHostLogin() { return Promise.resolve({ ok: false, reason: "invalid", message: "Host tools are live-only." }); },
+    gameHostState() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
+    gameHostDeal() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
+    gameHostStart() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
+    gameHostAdvance() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
+    gameHostReset() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
+    gameHostPlayTwist() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
+    gameHostSkipTwist() { return Promise.resolve({ ok: false, reason: "forbidden" }); }
   };
-
   if (global.InviteData) {
     global.InviteData.register("mock", adapter);
   }

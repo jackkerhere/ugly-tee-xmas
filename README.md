@@ -20,7 +20,14 @@ Then open http://127.0.0.1:4173/
 - `index.html` — Home (gift screen, hero poster, details, song)
 - `itinerary.html` — spoiler-free run of the night
 - `menu.html` — potluck + drinks placeholders
-- `me.html` — pick your name, create a PIN or log in, then your private page (gifts, chat, wish list, dish)
+- `me.html` — pick your name, create a PIN or log in, then your private page (gifts, chat, wish list, dish, Game)
+- `game.html` — public hub for Who Stole Christmas? (links to the guide, how to play, host, and TV)
+- `guide.html` — Character Guide (every role, Ghosts, Twist cards; no secrets, no PIN)
+- `how-to-play.html` — How to Play (setup, night, morning reveal, vote, ghosts, twists, wins)
+- `host.html` — host screen (claim with a guest PIN; Shuffle roles, start the story, advance beats, optional Twist cards)
+- `tv.html` — public TV / big screen (phase, roster, cliffhanger reveals, winners; no secret roles)
+
+Roles do not exist until the host presses Shuffle on the night. Until then the Game tab is a waiting state, with links to the guide and how to play (those open in-page so the song keeps playing). Printable one-page A4 PDFs live in the Christmas vault at `game/character-guide.pdf` and `game/how-to-play.pdf` (not in this repo).
 
 The live site talks to Supabase only through RPCs. Draw pairings never ship to the client. To preview the flow without the live guest list, open `me.html?demo=1` (Demo Guest / Demo Friend A / Demo Friend B). That mock is not a real draw. Do not put real pairings in the repo.
 
@@ -56,4 +63,4 @@ When testing is finished, Chris can remove them from the Supabase SQL editor (do
 SELECT private.remove_test_guests();
 ```
 
-This deletes the test guests and their dishes, wish lists, chat threads, and messages. It does not change real guests or real draws, and it is not exposed on the public site.
+This deletes the test guests and their dishes, wish lists, chat threads, messages, and any test game sessions, and leaves the current game not-dealt with no role rows. It does not change real guests or real draws, and it is not exposed on the public site.

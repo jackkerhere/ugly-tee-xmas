@@ -122,7 +122,41 @@
         token: String(token || "").trim(),
         thread
       });
-    }
+    },
+    gamePublic() { return rpc("game_public", {}); },
+    gameMe(token) { return rpc("game_me", { token: String(token || "").trim() }); },
+    gameSubmit(token, action, target, extra, extraText) {
+      return rpc("game_submit", {
+        token: String(token || "").trim(),
+        action,
+        target: target || null,
+        extra: extra || null,
+        extra_text: extraText || null
+      });
+    },
+    gameClaimHost(token, hostPin) {
+      return rpc("game_claim_host", { token: String(token || "").trim(), host_pin: hostPin || null });
+    },
+    gameHostLogin(guestId, pin) {
+      const digits = String(pin || "").replace(/\D/g, "");
+      return rpc("game_host_login", { guest_id: guestId, pin: digits });
+    },
+    gameHostState(hostToken) { return rpc("game_host_state", { host_token: String(hostToken || "").trim() }); },
+    gameHostDeal(hostToken, playerIds) {
+      return rpc("game_host_deal", { host_token: String(hostToken || "").trim(), player_ids: playerIds || [] });
+    },
+    gameHostStart(hostToken) { return rpc("game_host_start", { host_token: String(hostToken || "").trim() }); },
+    gameHostAdvance(hostToken) { return rpc("game_host_advance", { host_token: String(hostToken || "").trim() }); },
+    gameHostReset(hostToken) { return rpc("game_host_reset", { host_token: String(hostToken || "").trim() }); },
+    gameHostPlayTwist(hostToken, card, target, target2) {
+      return rpc("game_host_play_twist", {
+        host_token: String(hostToken || "").trim(),
+        card,
+        target: target || null,
+        target2: target2 || null
+      });
+    },
+    gameHostSkipTwist(hostToken) { return rpc("game_host_skip_twist", { host_token: String(hostToken || "").trim() }); }
   };
 
   if (global.InviteData) {

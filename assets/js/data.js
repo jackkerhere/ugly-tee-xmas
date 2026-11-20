@@ -46,7 +46,19 @@
     getWishlist: (token, scope) => current().getWishlist(token, scope),
     setWishlist: (token, text) => current().setWishlist(token, text),
     unreadCounts: (token) => current().unreadCounts(token),
-    markRead: (token, thread) => current().markRead(token, thread)
+    markRead: (token, thread) => current().markRead(token, thread),
+    gamePublic: () => current().gamePublic(),
+    gameMe: (token) => current().gameMe(token),
+    gameSubmit: (token, action, target, extra, extraText) => current().gameSubmit(token, action, target, extra, extraText),
+    gameClaimHost: (token, hostPin) => current().gameClaimHost(token, hostPin),
+    gameHostLogin: (guestId, pin) => current().gameHostLogin(guestId, pin),
+    gameHostState: (hostToken) => current().gameHostState(hostToken),
+    gameHostDeal: (hostToken, playerIds) => current().gameHostDeal(hostToken, playerIds),
+    gameHostStart: (hostToken) => current().gameHostStart(hostToken),
+    gameHostAdvance: (hostToken) => current().gameHostAdvance(hostToken),
+    gameHostReset: (hostToken) => current().gameHostReset(hostToken),
+    gameHostPlayTwist: (hostToken, card, target, target2) => current().gameHostPlayTwist(hostToken, card, target, target2),
+    gameHostSkipTwist: (hostToken) => current().gameHostSkipTwist(hostToken)
   };
 
   global.InviteData = api;

@@ -1136,7 +1136,7 @@
   }
 
 
-  const ME_TAB_IDS = { "ugly-tee": true, santa: true, bring: true };
+  const ME_TAB_IDS = { "ugly-tee": true, santa: true, bring: true, game: true };
   const UNREAD_POLL_MS = 20000;
   let unreadPollTimer = null;
   let unreadFocusBound = false;
@@ -1325,6 +1325,7 @@
             <button type="button" class="me-tab" role="tab" id="me-tab-ugly-tee" data-me-tab="ugly-tee" aria-controls="me-panel-ugly-tee" aria-selected="true">Ugly Tee</button>
             <button type="button" class="me-tab" role="tab" id="me-tab-santa" data-me-tab="santa" aria-controls="me-panel-santa" aria-selected="false">Secret Santa<span class="me-tab-badge" id="santa-unread" hidden></span></button>
             <button type="button" class="me-tab" role="tab" id="me-tab-bring" data-me-tab="bring" aria-controls="me-panel-bring" aria-selected="false">Potluck</button>
+            <button type="button" class="me-tab" role="tab" id="me-tab-game" data-me-tab="game" aria-controls="me-panel-game" aria-selected="false">Game</button>
           </div>
         </div>
         ${res.demo || (g.token && String(g.token).indexOf("demo") === 0) ? '<p class="banner-demo">Preview data only — not a real draw.</p>' : ""}
@@ -1368,6 +1369,9 @@
           <p class="form-status" id="form-status" hidden></p>
         </form>
         </section>
+        <section class="me-panel" id="me-panel-game" role="tabpanel" aria-labelledby="me-tab-game" hidden>
+          <div id="game-root"></div>
+        </section>
         <p class="logout-line"><a href="me.html" id="logout-link">Not you? Log out</a></p>
       `;
       const logout = $("#logout-link", root);
@@ -1379,6 +1383,10 @@
       bindWishlist(root, token);
       bindChat(root, token, g);
       bindMeSubtabs(root, token, g);
+      if (window.UglyTeeGame) {
+        const gameRoot = $("#game-root", root);
+        if (gameRoot) window.UglyTeeGame.renderPlayer(gameRoot, token);
+      }
       const form = $("#bringing-form");
       const status = $("#form-status");
       form.addEventListener("submit", (e) => {
@@ -1433,6 +1441,11 @@
     if (/itinerary\.html$/i.test(path)) return "itinerary";
     if (/menu\.html$/i.test(path)) return "menu";
     if (/me\.html$/i.test(path)) return "me";
+    if (/host\.html$/i.test(path)) return "host";
+    if (/tv\.html$/i.test(path)) return "tv";
+    if (/guide\.html$/i.test(path)) return "guide";
+    if (/how-to-play\.html$/i.test(path)) return "howto";
+    if (/game\.html$/i.test(path)) return "game";
     return "home";
   }
 
@@ -1455,6 +1468,15 @@
     reveals();
     renderMenu();
     renderGuestPage();
+    if (window.UglyTeeGame) {
+      const key = pageKey(location.href);
+      if (key === "host") window.UglyTeeGame.renderHost($("#host-root"));
+      else if (key === "tv") window.UglyTeeGame.renderTv($("#tv-root"));
+      else if (key === "guide") window.UglyTeeGame.renderGuide($("#guide-root"));
+      else if (key === "howto") window.UglyTeeGame.renderHowto($("#howto-root"));
+      else if (key === "game") window.UglyTeeGame.renderHub($("#game-hub-root"));
+      else if (key !== "me") window.UglyTeeGame.stop();
+    }
     bindPlayerControls();
     startUnreadPoll();
   }
@@ -1540,7 +1562,25 @@
     reveals();
     renderMenu();
     renderGuestPage();
+    if (window.UglyTeeGame) {
+      const key = pageKey(location.href);
+      if (key === "host") window.UglyTeeGame.renderHost(document.getElementById("host-root"));
+      else if (key === "tv") window.UglyTeeGame.renderTv(document.getElementById("tv-root"));
+      else if (key === "guide") window.UglyTeeGame.renderGuide(document.getElementById("guide-root"));
+      else if (key === "howto") window.UglyTeeGame.renderHowto(document.getElementById("howto-root"));
+      else if (key === "game") window.UglyTeeGame.renderHub(document.getElementById("game-hub-root"));
+    }
     spaNavigate();
     startUnreadPoll();
   });
+
+  window.UglyTeeUI = {
+    guestFaceHtml,
+    escapeHtml,
+    escapeAttr,
+    currentToken,
+    isDemoMode,
+    $: $,
+    $all: $all
+  };
 })();
