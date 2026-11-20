@@ -755,6 +755,21 @@ body.is-open .gift-screen { pointer-events: none; }
   box-shadow: none;
 }
 .who-tile.is-claimed:hover { background: #e8dfcc; }
+.who-test {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--green-deep);
+  background: #e4f3e6;
+  border: 1px solid rgba(42, 143, 60, 0.35);
+  border-radius: 999px;
+  padding: 0.08rem 0.45rem;
+  line-height: 1.2;
+}
+.who-tile.is-test { border-color: #cfe8d3; }
+
 @media (min-width: 800px) {
   .who-grid { grid-template-columns: repeat(3, 1fr); gap: 0.85rem; }
   .who-tile { min-height: 72px; }

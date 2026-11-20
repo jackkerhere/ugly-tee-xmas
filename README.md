@@ -43,3 +43,15 @@ SELECT private.reset_guest_claim('Display Name');
 ```
 
 This only clears the PIN so they can claim their name again. It is not exposed to the public site (`anon` cannot call it). It does not change draws or invite tokens. Do not select or print draw rows when using it.
+
+## Temporary test guests
+
+Two temporary names, Test Elf 1 and Test Elf 2, may appear at the bottom of the My page grid (marked “test”) so Jack can try two accounts. They have their own draw rows only; real guests are not changed.
+
+When testing is finished, Chris can remove them from the Supabase SQL editor (do not run this until Jack is done):
+
+```sql
+SELECT private.remove_test_guests();
+```
+
+This deletes the test guests and their dishes, wish lists, chat threads, and messages. It does not change real guests or real draws, and it is not exposed on the public site.

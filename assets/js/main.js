@@ -554,9 +554,11 @@
   function whoGridHtml(guests) {
     const tiles = (guests || []).map((g) => {
       const claimed = !!g.claimed;
+      const isTest = !!g.is_test;
       const name = g.display_name || g.name || "";
-      return `<button type="button" class="who-tile${claimed ? " is-claimed" : ""}" data-guest-id="${escapeAttr(g.id)}" data-claimed="${claimed ? "1" : "0"}" data-name="${escapeAttr(name)}">
+      return `<button type="button" class="who-tile${claimed ? " is-claimed" : ""}${isTest ? " is-test" : ""}" data-guest-id="${escapeAttr(g.id)}" data-claimed="${claimed ? "1" : "0"}" data-name="${escapeAttr(name)}">
         <span class="who-name">${escapeHtml(name)}</span>
+        ${isTest ? '<span class="who-test">test</span>' : ""}
         ${claimed ? '<span class="who-claimed">Claimed — log in with your PIN</span>' : ""}
       </button>`;
     }).join("");
