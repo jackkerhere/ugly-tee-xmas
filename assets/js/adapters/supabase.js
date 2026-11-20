@@ -1,76 +1,111 @@
 /**
- * Supabase adapter STUB.
- * Not connected. Do not add a project URL, API key, or real data here.
- * Jack has not chosen a service yet — do not sign up from this preview.
+ * Supabase adapter.
+ * Talks to the project only through SECURITY DEFINER RPCs (no direct table access).
+ * The publishable key is public by design — never add a service-role key here.
  *
- * Intended shape once wired (server-side / RLS, never a public list of draws):
- *   getGuestByToken(k)  -> select only the row matching the token
- *                          (name, secret_santa_for, ugly_tee_for, bringing)
- *   loginWithPin(pin)   -> must run server-side (RPC or edge function).
- *                          Store only hashed PINs. Rate-limit attempts.
- *                          Return a token on success, or an error.
- *                          Never ship guest PINs (or a PIN list) to the client.
- *   saveBringing(k, payload) -> update bringing fields for that token only
- *   listMenuItems()     -> select dish, category, display_name only
- *                          (never draw recipients)
- *   listHostProvisions() -> static or a small host_items table
+ * PIN checks, draws and santa identity stay on the server:
+ *   login_with_pin hashes and rate-limits on the server;
+ *   get_me returns only the caller’s name and their two giftee names;
+ *   list_messages / send_message return a role, never the santa’s name, to the giftee.
  *
- *   Secret Santa chat (not approved to connect yet — document only):
- *   threads table       -> one row per santa/giftee pair
- *                          (id, santa_guest_id, giftee_guest_id).
- *                          Never expose santa_guest_id to the giftee.
- *   messages table      -> thread_id, sender_role ('santa' | 'giftee'),
- *                          body, created_at.
- *                          Persist the sender as a role, not a display name.
- *   listMessages(k, thread, since)
- *                       -> thread is 'giftee' (I am the santa) or 'santa'
- *                          (I am the giftee). Resolve the pair server-side
- *                          from the caller's token. Return only messages
- *                          after `since`. Each item includes sender role,
- *                          body, and timestamp — never the santa's name,
- *                          token, or guest id, when the caller is the giftee.
- *   sendMessage(k, thread, text)
- *                       -> insert with sender_role inferred from the token
- *                          (do not trust a client-supplied sender). Rate-limit.
- *   wishlists table     -> guest_id, text, updated_at
- *   getWishlist(k, scope)
- *                       -> 'mine' is the caller's row; 'giftee' is the
- *                          wishlist of the person they are buying for.
- *                          A guest must not read their santa's wishlist.
- *   setWishlist(k, text) -> update only the caller's row.
- *
- * Required later: a table such as `guests` with a unique unguessable `token`,
- * row-level security so the anonymous client can read/update only WHERE token = k,
- * and no select-all policy on draw columns.
- *
- * Chat RLS (when a backend is approved):
- *   - A guest may SELECT only threads where they are santa_guest_id or giftee_guest_id.
- *   - A guest may INSERT messages only on those threads, with sender_role matching
- *     their side of the pair (enforced in an RPC or trigger, not by the client).
- *   - A guest may SELECT their own wishlist, and the wishlist of their giftee only.
- *   - Views or RPCs used by the giftee must return role labels (e.g. "Your Secret
- *     Santa"), never the santa's identity.
+ * Preview: add ?demo=1 to use the mock adapter instead.
  */
 (function (global) {
-  const notConfigured = (method) =>
-    Promise.resolve({
-      ok: false,
-      reason: "not-configured",
-      message: "Supabase is not connected in this preview (" + method + ")."
+  const PROJECT_URL = "https://puufnifihqeujbraurki.supabase.co";
+  const PUBLISHABLE_KEY = "sb_publishable_lMYo6N3A7_ph7VL-mrpfXA_RZ9y-JcV";
+
+  const HOST_PROVISIONS = [
+    { category: "Soft drinks", item: "To be confirmed", note: "Placeholder — specifics not chosen yet." },
+    { category: "Mixers", item: "To be confirmed", note: "Placeholder — specifics not chosen yet." },
+    { category: "Ice", item: "To be confirmed", note: "Placeholder — specifics not chosen yet." }
+  ];
+
+  const MENU_CATEGORIES = ["Main", "Side", "Dessert", "Snack", "Other"];
+
+  async function rpc(name, args) {
+    const res = await fetch(PROJECT_URL + "/rest/v1/rpc/" + name, {
+      method: "POST",
+      headers: {
+        apikey: PUBLISHABLE_KEY,
+        Authorization: "Bearer " + PUBLISHABLE_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(args || {})
     });
+    let data = null;
+    const raw = await res.text();
+    try { data = raw ? JSON.parse(raw) : null; } catch { data = null; }
+    if (!res.ok) {
+      const message = (data && (data.message || data.hint)) || "Something went wrong. Please try again.";
+      return { ok: false, reason: "error", message };
+    }
+    if (data && typeof data === "object" && !Array.isArray(data)) return data;
+    return { ok: false, reason: "error", message: "Unexpected response." };
+  }
 
   const adapter = {
     name: "supabase",
-    getGuestByToken: () => notConfigured("getGuestByToken"),
-    loginWithPin: () => notConfigured("loginWithPin"),
-    saveBringing: () => notConfigured("saveBringing"),
-    clearBringing: () => notConfigured("clearBringing"),
-    listMenuItems: () => notConfigured("listMenuItems"),
-    listHostProvisions: () => notConfigured("listHostProvisions"),
-    listMessages: () => notConfigured("listMessages"),
-    sendMessage: () => notConfigured("sendMessage"),
-    getWishlist: () => notConfigured("getWishlist"),
-    setWishlist: () => notConfigured("setWishlist")
+    loginWithPin(pin) {
+      const digits = String(pin || "").replace(/\D/g, "");
+      return rpc("login_with_pin", { pin: digits });
+    },
+    getGuestByToken(token) {
+      return rpc("get_me", { token: String(token || "").trim() });
+    },
+    saveBringing(token, payload) {
+      return rpc("upsert_dish", {
+        token: String(token || "").trim(),
+        dish: payload && payload.dish,
+        category: payload && payload.category,
+        notes: payload && payload.notes
+      });
+    },
+    clearBringing(token) {
+      return rpc("clear_dish", { token: String(token || "").trim() });
+    },
+    listMenuItems() {
+      return rpc("menu").then((res) => {
+        if (!res.ok) return res;
+        return {
+          ok: true,
+          items: res.items || [],
+          categories: res.categories || MENU_CATEGORIES
+        };
+      });
+    },
+    listHostProvisions() {
+      return Promise.resolve({
+        ok: true,
+        provisions: HOST_PROVISIONS,
+        alcoholNote: "Jack covers alcohol."
+      });
+    },
+    listMessages(token, thread, since) {
+      return rpc("list_messages", {
+        token: String(token || "").trim(),
+        thread,
+        since: since || null
+      });
+    },
+    sendMessage(token, thread, text) {
+      return rpc("send_message", {
+        token: String(token || "").trim(),
+        thread,
+        body: text
+      });
+    },
+    getWishlist(token, scope) {
+      return rpc("get_wishlist", {
+        token: String(token || "").trim(),
+        scope: scope || "mine"
+      });
+    },
+    setWishlist(token, text) {
+      return rpc("set_wishlist", {
+        token: String(token || "").trim(),
+        body: text
+      });
+    }
   };
 
   if (global.InviteData) {

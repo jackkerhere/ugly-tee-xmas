@@ -36,7 +36,7 @@
     persistToken("");
     const url = new URL("me.html", location.href);
     url.searchParams.delete("k");
-    // Drop the query entirely if it is now empty
+    if (isDemoMode()) url.searchParams.set("demo", "1");
     const next = url.pathname.split("/").pop() + (url.search || "");
     if (location.pathname.endsWith("me.html") || /me\.html$/i.test(location.pathname)) {
       history.replaceState({ spa: true }, "", next || "me.html");
@@ -47,9 +47,15 @@
     location.href = next || "me.html";
   }
 
+  function isDemoMode() {
+    try { return new URLSearchParams(location.search).get("demo") === "1"; }
+    catch { return false; }
+  }
+
   function withToken(href) {
     const k = currentToken();
-    if (!k) return href;
+    const demo = isDemoMode();
+    if (!k && !demo) return href;
     let path = href;
     let hash = "";
     let query = "";
@@ -64,8 +70,10 @@
       path = path.slice(0, qAt);
     }
     const params = new URLSearchParams(query);
-    params.set("k", k);
-    return path + "?" + params.toString() + hash;
+    if (k) params.set("k", k);
+    if (demo) params.set("demo", "1");
+    const qs = params.toString();
+    return path + (qs ? "?" + qs : "") + hash;
   }
 
   function isSitePage(href) {
@@ -978,7 +986,7 @@
           }
           status.hidden = false;
           status.style.color = "var(--green-deep)";
-          status.textContent = "Saved. It will show on the Menu tab in this browser (preview only).";
+          status.textContent = isDemoMode() ? "Saved. It will show on the Menu tab in this browser (preview only)." : "Saved. It will show on the Menu tab.";
         });
       });
       const clearBtn = $("#clear-dish");
@@ -989,7 +997,7 @@
             $("#notes").value = "";
             status.hidden = false;
             status.style.color = "var(--green-deep)";
-            status.textContent = "Cleared from the preview menu.";
+            status.textContent = isDemoMode() ? "Cleared from the preview menu." : "Cleared from the menu.";
           });
         });
       }
@@ -1052,6 +1060,7 @@
     const url = new URL(href, location.href);
     const k = currentToken();
     if (k && !url.searchParams.get("k")) url.searchParams.set("k", k);
+    if (isDemoMode()) url.searchParams.set("demo", "1");
     const res = await fetch(url.pathname + url.search, { credentials: "same-origin" });
     if (!res.ok) {
       location.href = url.href;

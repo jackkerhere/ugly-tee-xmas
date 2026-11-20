@@ -1,13 +1,18 @@
 /**
  * Pluggable data layer for the invite site.
- * Preview uses the mock/local adapter only.
- * A Supabase adapter stub lives in adapters/supabase.js — not connected.
+ * Default adapter is Supabase (RPC only). Add ?demo=1 to use the mock/local adapter.
  * Do not put real guest names or real draw pairings in this file.
  */
 (function (global) {
+  function selectedAdapter() {
+    try {
+      if (new URLSearchParams(location.search).get("demo") === "1") return "mock";
+    } catch (_) { /* ignore */ }
+    return "supabase";
+  }
+
   const config = {
-    adapter: "mock"
-    // Later, flip to "supabase" once Jack chooses a service and a backend exists.
+    get adapter() { return selectedAdapter(); }
   };
 
   const adapters = {};
@@ -17,7 +22,7 @@
   }
 
   function current() {
-    const name = config.adapter;
+    const name = selectedAdapter();
     const adapter = adapters[name];
     if (!adapter) {
       return Promise.reject(new Error("No data adapter registered: " + name));
