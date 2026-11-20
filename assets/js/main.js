@@ -148,7 +148,7 @@
   function reveals() {
     const items = $all(".reveal");
     if (!items.length) return;
-    if (reduce) {
+    if (reduce || document.documentElement.classList.contains("is-shot")) {
       items.forEach((el) => el.classList.add("is-in"));
       return;
     }
@@ -894,11 +894,17 @@
     return date + ", " + time;
   }
 
+  function displayAuthorLabel(label) {
+    const s = String(label || "").trim();
+    if (s === "Your Secret Santa 🎅" || s === "Your Secret Santa") return "🎅 Your Secret Santa";
+    return s;
+  }
+
   function messageBubbleHtml(m) {
     const side = m.fromMe ? "me" : "them";
     return `<div class="bubble-row ${side}" data-id="${escapeAttr(m.id)}" data-at="${escapeAttr(m.createdAt)}">
       <div class="bubble">
-        <p class="bubble-author">${escapeHtml(m.authorLabel)}</p>
+        <p class="bubble-author">${escapeHtml(displayAuthorLabel(m.authorLabel))}</p>
         <p class="bubble-text">${escapeHtml(m.text)}</p>
         <p class="bubble-time"><time datetime="${escapeAttr(m.createdAt)}">${escapeHtml(formatChatTime(m.createdAt))}</time></p>
       </div>
@@ -913,12 +919,12 @@
       <section class="ss-chat" aria-label="Secret Santa chat">
         <div class="section-head" style="margin-top:2rem;margin-bottom:1rem">
           <div class="cloud-title"><h2>Secret Santa chat</h2></div>
-          <p class="lede">Two private threads. Your giftee never sees your name — you show up as Your Secret Santa.</p>
+          <p class="lede">Two private threads. The person you’re buying a gift for never sees your name — you show up as 🎅 Your Secret Santa.</p>
         </div>
         <form class="card form wishlist-card reveal" id="wishlist-form">
-          <h3>My wish list</h3>
-          <p>Your Secret Santa can see this. You can change it any time.</p>
-          <label class="visually-hidden" for="wishlist-text">My wish list</label>
+          <h3>My wish list (your Secret Santa sees this)</h3>
+          <p>You can change it any time.</p>
+          <label class="visually-hidden" for="wishlist-text">My wish list (your Secret Santa sees this)</label>
           <textarea id="wishlist-text" name="wishlist" maxlength="400" rows="3" placeholder="A few gift ideas, sizes, or things to skip…">${escapeHtml(wishlist || "")}</textarea>
           <div class="form-actions">
             <button class="btn btn-gold" type="submit">Save wish list</button>
@@ -927,8 +933,8 @@
         </form>
         <div class="card chat-panel reveal" style="margin-top:1.1rem">
           <div class="chat-tabs" role="tablist" aria-label="Secret Santa threads">
-            <button type="button" class="chat-tab" role="tab" id="tab-giftee" aria-controls="chat-log" aria-selected="true" data-thread="giftee">My giftee</button>
-            <button type="button" class="chat-tab" role="tab" id="tab-santa" aria-controls="chat-log" aria-selected="false" data-thread="santa">My Secret Santa</button>
+            <button type="button" class="chat-tab" role="tab" id="tab-giftee" aria-controls="chat-log" aria-selected="true" data-thread="giftee">Chat with ${escapeHtml(g.secretSantaFor)} (you’re their Santa)</button>
+            <button type="button" class="chat-tab" role="tab" id="tab-santa" aria-controls="chat-log" aria-selected="false" data-thread="santa">Chat with your Secret Santa (who has you)</button>
           </div>
           <div class="chat-peer" id="chat-peer"></div>
           <div class="chat-log" id="chat-log" role="log" aria-live="polite" aria-relevant="additions"></div>
@@ -962,16 +968,16 @@
     if (thread === "giftee") {
       const wish = (gifteeWish || "").trim();
       peer.innerHTML = `
-        <p class="chat-peer-name">Chatting with ${escapeHtml(guest.secretSantaFor)}</p>
-        <p class="chat-peer-note">They see you as Your Secret Santa 🎅 — your name stays hidden.</p>
+        <p class="chat-peer-name">Chat with ${escapeHtml(guest.secretSantaFor)} (you’re their Santa)</p>
+        <p class="chat-peer-note">They see you as 🎅 Your Secret Santa — your name stays hidden.</p>
         <div class="peer-wish">
           <h3>Their wish list</h3>
           <p>${wish ? escapeHtml(wish) : "They haven’t added a wish list yet."}</p>
         </div>`;
     } else {
       peer.innerHTML = `
-        <p class="chat-peer-name">Your Secret Santa 🎅</p>
-        <p class="chat-peer-note">They stay anonymous. They can see the wish list you saved above.</p>`;
+        <p class="chat-peer-name">🎅 Your Secret Santa</p>
+        <p class="chat-peer-note">This is the person who has you. They stay anonymous. They can see the wish list you saved above.</p>`;
     }
   }
 
@@ -1031,9 +1037,12 @@
         if (!res.ok || !chatCtx || chatCtx.thread !== thread) return;
         const messages = res.messages || [];
         if (fresh) {
+          const emptyMsg = thread === "giftee"
+            ? "No messages yet. Say hi to " + (guest.secretSantaFor || "them") + "!"
+            : "No messages yet. Say hi to your Secret Santa!";
           log.innerHTML = messages.length
             ? messages.map(messageBubbleHtml).join("")
-            : '<p class="chat-empty">No messages yet. Say hi!</p>';
+            : '<p class="chat-empty">' + escapeHtml(emptyMsg) + "</p>";
           log.scrollTop = log.scrollHeight;
         } else if (messages.length) {
           const empty = log.querySelector(".chat-empty");
@@ -1137,18 +1146,17 @@
       root.innerHTML = `
         ${res.demo || (g.token && String(g.token).indexOf("demo") === 0) ? '<p class="banner-demo">Preview data only — not a real draw.</p>' : ""}
         <p class="hi">${guestFaceHtml(g.name, { className: "is-large", sizes: "124px" })}<span class="outline-red">Hi, ${escapeHtml(g.name)}</span></p>
-        <p class="lede" style="margin-bottom:1.5rem">This page is just for you. Please don’t share your link — it shows your Secret Santa and ugly-tee person.</p>
+        <p class="lede" style="margin-bottom:1.5rem">This page is just for you. Please don’t share your link — it shows who you’re getting a gift and an ugly tee for.</p>
         <div class="secret-grid">
           <article class="card secret-card reveal">
             <p class="icon" aria-hidden="true">🎁</p>
-            <h3>Your Secret Santa</h3>
-            <p>You’re getting a gift for</p>
+            <h3>You’re the Secret Santa for:</h3>
             <p class="for">${escapeHtml(g.secretSantaFor)}</p>
+            <p class="hint">Buy them a gift. Keep it secret!</p>
           </article>
           <article class="card secret-card reveal">
             <p class="icon" aria-hidden="true">👕</p>
-            <h3>Your ugly tee</h3>
-            <p>You’re buying an ugly Christmas tee for</p>
+            <h3>You’re getting an ugly tee for:</h3>
             <p class="for">${escapeHtml(g.uglyTeeFor)}</p>
           </article>
         </div>

@@ -679,11 +679,17 @@ body.is-open .gift-screen { pointer-events: none; }
 .hi .who-face-wrap { width: 7.75rem; max-width: 7.75rem; }
 
 .secret-grid { display: grid; gap: 1rem; }
-.secret-card h3 { margin-bottom: 0.35rem; }
+.secret-card h3 { margin-bottom: 0.35rem; line-height: 1.25; overflow-wrap: anywhere; }
 .secret-card .for {
   font-family: var(--font-display);
   font-size: 1.6rem;
   color: var(--navy);
+}
+.secret-card .hint {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.4;
 }
 .form label { display: block; font-weight: 700; font-family: var(--font-display); margin: 0.8rem 0 0.3rem; }
 .form input[type="text"], .form select, .form textarea {
@@ -896,23 +902,28 @@ body.is-open .gift-screen { pointer-events: none; }
   overflow: hidden;
 }
 .chat-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.45rem;
   margin: 0 0 0.85rem;
+  width: 100%;
+  max-width: 100%;
 }
 .chat-tab {
-  flex: 1 1 0;
   min-width: 0;
   min-height: 48px;
-  padding: 0.55rem 0.4rem;
+  padding: 0.55rem 0.45rem;
   border: 2px solid #e0d4bf;
-  border-radius: 999px;
+  border-radius: 16px;
   background: #fff;
   color: var(--navy);
   font-family: var(--font-display);
   font-weight: 650;
-  font-size: clamp(0.9rem, 3.5vw, 1.05rem);
-  line-height: 1.2;
+  font-size: clamp(0.78rem, 3.1vw, 0.95rem);
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
   cursor: pointer;
   transition: background 200ms var(--ease), border-color 200ms var(--ease), color 200ms var(--ease), transform 200ms var(--ease);
 }
@@ -1175,6 +1186,7 @@ html.is-shot, html.is-shot * { cursor: none !important; }
 html.is-shot { scrollbar-width: none; }
 html.is-shot::-webkit-scrollbar, html.is-shot *::-webkit-scrollbar { display: none; }
 html.is-shot .flake { display: none !important; animation: none !important; }
+html.is-shot .reveal { opacity: 1; transform: none; }
 html.is-shot .mute-fab, html.is-shot .resume-bar { display: none !important; }
 
 html.is-shot *, html.is-shot *::before, html.is-shot *::after {

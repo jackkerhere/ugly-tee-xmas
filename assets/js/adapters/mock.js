@@ -172,9 +172,9 @@
       authorLabel = "You";
     } else if (thread === "giftee") {
       const guest = DEMO_GUESTS[token];
-      authorLabel = (guest && guest.secretSantaFor) || "Your giftee";
+      authorLabel = (guest && guest.secretSantaFor) || "Them";
     } else {
-      authorLabel = "Your Secret Santa 🎅";
+      authorLabel = "🎅 Your Secret Santa";
     }
     return {
       id: raw.id,
