@@ -17,7 +17,7 @@ Then open http://127.0.0.1:4173/
 
 ## Pages
 
-- `index.html` — Home (gift screen, hero poster, details, crew, song)
+- `index.html` — Home (gift screen, hero poster, details, song)
 - `itinerary.html` — spoiler-free run of the night
 - `menu.html` — potluck + drinks placeholders
 - `me.html` — pick your name, create a PIN or log in, then your private page (gifts, chat, wish list, dish)

@@ -178,8 +178,7 @@ h1, h2, h3, .display {
 .site-nav a:focus-visible,
 .btn:focus-visible,
 .gift-open:focus-visible,
-.player-btn:focus-visible,
-.poster-link:focus-visible {
+.player-btn:focus-visible {
   outline: 3px solid var(--gold-bright);
   outline-offset: 3px;
 }
@@ -344,8 +343,7 @@ main { padding-bottom: 4rem; }
 .grid-4 { grid-template-columns: 1fr 1fr; }
 
 /* Full-width posters at natural aspect (no crop, no blur, no max-height) */
-.hero-bleed,
-.crew-bleed {
+.hero-bleed {
   width: 100%;
   max-width: none;
   margin: 0;
@@ -363,9 +361,13 @@ main { padding-bottom: 4rem; }
   overflow: hidden;
   box-shadow: none;
   background: #0b1433;
+  cursor: default;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
-a.poster-frame:hover,
-a.poster-frame:active { transform: none; box-shadow: none; }
 .poster-frame picture,
 .poster-frame img {
   width: 100%;
@@ -374,6 +376,9 @@ a.poster-frame:active { transform: none; box-shadow: none; }
   display: block;
   object-fit: contain;
   object-position: center top;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 .poster-wide { width: 100%; }
 .hero-intro {
@@ -480,27 +485,6 @@ a.poster-frame:active { transform: none; box-shadow: none; }
 .menu-slot { border-style: dashed; border-color: rgba(255,255,255,0.55); background: rgba(251,246,236,0.72); color: var(--muted); font-style: italic; }
 .menu-item .who { color: var(--red-deep); font-family: var(--font-display); font-weight: 600; white-space: nowrap; }
 .host-note { margin-top: 0.5rem; color: rgba(251,246,236,0.8); }
-
-/* Crew */
-.crew-bleed .section-head {
-  margin: 0;
-  padding: 3.25rem var(--pad) 1.25rem;
-}
-.crew-poster {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-}
-.crew-poster picture { display: block; width: 100%; }
-.crew-art {
-  width: 100%;
-  height: auto;
-  max-width: 100%;
-  max-height: none;
-  margin: 0;
-  filter: drop-shadow(0 16px 30px rgba(0,0,0,0.35));
-  object-fit: contain;
-}
 
 /* Player + lyrics */
 .player-card { max-width: none; width: 100%; margin: 0 auto 1.25rem; }
