@@ -649,6 +649,248 @@
     else if (inputs[0]) inputs[0].focus();
   }
 
+
+  const CHAT_PROMPTS = ["What size tee?", "Any allergies?", "Wish list?"];
+  const CHAT_POLL_MS = 4000;
+  let chatPollTimer = null;
+  let chatCtx = null;
+
+  function stopChatPoll() {
+    if (chatPollTimer) {
+      clearInterval(chatPollTimer);
+      chatPollTimer = null;
+    }
+    chatCtx = null;
+  }
+
+  function formatChatTime(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    if (d.toDateString() === new Date().toDateString()) return time;
+    const date = d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    return date + ", " + time;
+  }
+
+  function messageBubbleHtml(m) {
+    const side = m.fromMe ? "me" : "them";
+    return `<div class="bubble-row ${side}" data-id="${escapeAttr(m.id)}" data-at="${escapeAttr(m.createdAt)}">
+      <div class="bubble">
+        <p class="bubble-author">${escapeHtml(m.authorLabel)}</p>
+        <p class="bubble-text">${escapeHtml(m.text)}</p>
+        <p class="bubble-time"><time datetime="${escapeAttr(m.createdAt)}">${escapeHtml(formatChatTime(m.createdAt))}</time></p>
+      </div>
+    </div>`;
+  }
+
+  function chatSectionHtml(g, wishlist) {
+    const prompts = CHAT_PROMPTS.map((p) =>
+      `<button type="button" class="prompt-chip" data-prompt="${escapeAttr(p)}">${escapeHtml(p)}</button>`
+    ).join("");
+    return `
+      <section class="ss-chat" aria-label="Secret Santa chat">
+        <div class="section-head" style="margin-top:2rem;margin-bottom:1rem">
+          <div class="cloud-title"><h2>Secret Santa chat</h2></div>
+          <p class="lede">Two private threads. Your giftee never sees your name — you show up as Your Secret Santa.</p>
+        </div>
+        <form class="card form wishlist-card reveal" id="wishlist-form">
+          <h3>My wish list</h3>
+          <p>Your Secret Santa can see this. You can change it any time.</p>
+          <label class="visually-hidden" for="wishlist-text">My wish list</label>
+          <textarea id="wishlist-text" name="wishlist" maxlength="400" rows="3" placeholder="A few gift ideas, sizes, or things to skip…">${escapeHtml(wishlist || "")}</textarea>
+          <div class="form-actions">
+            <button class="btn btn-gold" type="submit">Save wish list</button>
+          </div>
+          <p class="form-status" id="wishlist-status" hidden></p>
+        </form>
+        <div class="card chat-panel reveal" style="margin-top:1.1rem">
+          <div class="chat-tabs" role="tablist" aria-label="Secret Santa threads">
+            <button type="button" class="chat-tab" role="tab" id="tab-giftee" aria-controls="chat-log" aria-selected="true" data-thread="giftee">My giftee</button>
+            <button type="button" class="chat-tab" role="tab" id="tab-santa" aria-controls="chat-log" aria-selected="false" data-thread="santa">My Secret Santa</button>
+          </div>
+          <div class="chat-peer" id="chat-peer"></div>
+          <div class="chat-log" id="chat-log" role="log" aria-live="polite" aria-relevant="additions"></div>
+          <div class="chat-prompts" id="chat-prompts">${prompts}</div>
+          <form class="chat-compose" id="chat-form">
+            <label class="visually-hidden" for="chat-input">Message</label>
+            <textarea id="chat-input" rows="1" maxlength="400" placeholder="Write a message…" enterkeyhint="send"></textarea>
+            <button class="btn btn-gold" type="submit">Send</button>
+          </form>
+          <p class="chat-status" id="chat-status" hidden></p>
+        </div>
+      </section>
+    `;
+  }
+
+  function isChatNearBottom(log) {
+    return (log.scrollHeight - log.scrollTop - log.clientHeight) < 80;
+  }
+
+  function appendChatMessages(log, messages, forceScroll) {
+    if (!messages || !messages.length) return;
+    const near = forceScroll || isChatNearBottom(log);
+    const html = messages.map(messageBubbleHtml).join("");
+    log.insertAdjacentHTML("beforeend", html);
+    if (near) log.scrollTop = log.scrollHeight;
+  }
+
+  function setChatPeer(thread, guest, gifteeWish) {
+    const peer = $("#chat-peer");
+    if (!peer) return;
+    if (thread === "giftee") {
+      const wish = (gifteeWish || "").trim();
+      peer.innerHTML = `
+        <p class="chat-peer-name">Chatting with ${escapeHtml(guest.secretSantaFor)}</p>
+        <p class="chat-peer-note">They see you as Your Secret Santa 🎅 — your name stays hidden.</p>
+        <div class="peer-wish">
+          <h3>Their wish list</h3>
+          <p>${wish ? escapeHtml(wish) : "They haven’t added a wish list yet."}</p>
+        </div>`;
+    } else {
+      peer.innerHTML = `
+        <p class="chat-peer-name">Your Secret Santa 🎅</p>
+        <p class="chat-peer-note">They stay anonymous. They can see the wish list you saved above.</p>`;
+    }
+  }
+
+  function bindWishlist(root, token) {
+    const form = $("#wishlist-form", root);
+    const status = $("#wishlist-status", root);
+    if (!form) return;
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      window.InviteData.setWishlist(token, $("#wishlist-text", root).value).then((out) => {
+        status.hidden = false;
+        if (!out.ok) {
+          status.style.color = "var(--red-deep)";
+          status.textContent = out.message || "Couldn’t save just now.";
+          return;
+        }
+        status.style.color = "var(--green-deep)";
+        status.textContent = "Saved. Your Secret Santa can see this.";
+      });
+    });
+  }
+
+  function bindChat(root, token, guest) {
+    const log = $("#chat-log", root);
+    const form = $("#chat-form", root);
+    const input = $("#chat-input", root);
+    const status = $("#chat-status", root);
+    const prompts = $("#chat-prompts", root);
+    if (!log || !form || !input) return;
+
+    stopChatPoll();
+    chatCtx = { token, thread: "giftee", lastAt: "", guest };
+
+    function setStatus(msg, ok) {
+      if (!status) return;
+      if (!msg) { status.hidden = true; status.textContent = ""; return; }
+      status.hidden = false;
+      status.style.color = ok ? "var(--green-deep)" : "var(--red-deep)";
+      status.textContent = msg;
+    }
+
+    function showThreadChrome(thread) {
+      $all(".chat-tab", root).forEach((btn) => {
+        const on = btn.getAttribute("data-thread") === thread;
+        btn.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      if (prompts) prompts.hidden = thread !== "giftee";
+      input.placeholder = thread === "giftee"
+        ? "Message " + guest.secretSantaFor + "…"
+        : "Message your Secret Santa…";
+    }
+
+    function loadThread(thread, opts) {
+      const fresh = !opts || opts.fresh;
+      const since = fresh ? "" : chatCtx.lastAt;
+      return window.InviteData.listMessages(token, thread, since).then((res) => {
+        if (!res.ok || !chatCtx || chatCtx.thread !== thread) return;
+        const messages = res.messages || [];
+        if (fresh) {
+          log.innerHTML = messages.length
+            ? messages.map(messageBubbleHtml).join("")
+            : '<p class="chat-empty">No messages yet. Say hi!</p>';
+          log.scrollTop = log.scrollHeight;
+        } else if (messages.length) {
+          const empty = log.querySelector(".chat-empty");
+          if (empty) empty.remove();
+          appendChatMessages(log, messages, false);
+        }
+        if (messages.length) chatCtx.lastAt = messages[messages.length - 1].createdAt;
+      });
+    }
+
+    function switchThread(thread) {
+      if (!chatCtx) return;
+      chatCtx.thread = thread;
+      chatCtx.lastAt = "";
+      showThreadChrome(thread);
+      const wishCall = thread === "giftee"
+        ? window.InviteData.getWishlist(token, "giftee")
+        : Promise.resolve({ ok: true, text: "" });
+      wishCall.then((wish) => {
+        setChatPeer(thread, guest, wish && wish.ok ? wish.text : "");
+      });
+      loadThread(thread, { fresh: true });
+    }
+
+    $all(".chat-tab", root).forEach((btn) => {
+      btn.addEventListener("click", () => switchThread(btn.getAttribute("data-thread")));
+    });
+
+    if (prompts) {
+      prompts.addEventListener("click", (e) => {
+        const chip = e.target.closest(".prompt-chip");
+        if (!chip) return;
+        input.value = chip.getAttribute("data-prompt") || "";
+        input.focus();
+      });
+    }
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text || !chatCtx) return;
+      const thread = chatCtx.thread;
+      input.value = "";
+      window.InviteData.sendMessage(token, thread, text).then((out) => {
+        if (!out.ok) {
+          setStatus(out.message || "Couldn’t send just now.", false);
+          if (!input.value) input.value = text;
+          return;
+        }
+        setStatus("");
+        const empty = log.querySelector(".chat-empty");
+        if (empty) empty.remove();
+        appendChatMessages(log, [out.message], true);
+        chatCtx.lastAt = out.message.createdAt;
+      });
+    });
+
+    showThreadChrome("giftee");
+    switchThread("giftee");
+    chatPollTimer = setInterval(() => {
+      if (!chatCtx) return;
+      loadThread(chatCtx.thread, { fresh: false });
+      if (chatCtx.thread === "giftee") {
+        window.InviteData.getWishlist(token, "giftee").then((wish) => {
+          if (chatCtx && chatCtx.thread === "giftee") {
+            setChatPeer("giftee", guest, wish && wish.ok ? wish.text : "");
+          }
+        });
+      }
+    }, CHAT_POLL_MS);
+  }
+
   function renderGuestPage() {
     const root = $("#me-root");
     if (!root || !globalInvite()) return;
@@ -689,6 +931,7 @@
             <p class="for">${escapeHtml(g.uglyTeeFor)}</p>
           </article>
         </div>
+        ${chatSectionHtml(g, "")}
         <form class="card form reveal" id="bringing-form" style="margin-top:1.25rem">
           <h3>What I’m bringing</h3>
           <p>This is a potluck. Your dish will appear on the Menu tab.</p>
@@ -712,6 +955,12 @@
       `;
       const logout = $("#logout-link", root);
       if (logout) logout.addEventListener("click", logoutGuest);
+      data.getWishlist(token, "mine").then((wish) => {
+        const area = $("#wishlist-text", root);
+        if (area && wish && wish.ok) area.value = wish.text || "";
+      });
+      bindWishlist(root, token);
+      bindChat(root, token, g);
       const form = $("#bringing-form");
       const status = $("#form-status");
       form.addEventListener("submit", (e) => {
@@ -780,6 +1029,7 @@
   }
 
   function afterPageChange() {
+    stopChatPoll();
     updateNavCurrent();
     carryTokenInLinks();
     personalizeGift();

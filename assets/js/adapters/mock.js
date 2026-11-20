@@ -2,9 +2,12 @@
  * Mock / local adapter for the private preview.
  * Contains ONLY obviously fake demo records. No real guests, no real draws.
  * "What I'm bringing" is stored in this browser's localStorage so the Menu tab can show it.
+ * Secret Santa chat and wish lists are also localStorage-only in this preview.
  */
 (function (global) {
   const STORAGE_KEY = "uglytee-demo-bringing-v1";
+  const MSG_KEY = "uglytee-demo-messages-v1";
+  const WISH_KEY = "uglytee-demo-wishlist-v1";
 
   // Obviously fake preview records — not a real draw.
   const DEMO_GUESTS = {
@@ -25,6 +28,45 @@
 
   const MENU_CATEGORIES = ["Main", "Side", "Dessert", "Snack", "Other"];
 
+  // Demo-only seed chat. "demo:santa" messages are from the mock santa role —
+  // the sender's demo name is never stored or returned on that thread.
+  const SEED_MESSAGES = {
+    "demo:giftee": [
+      {
+        id: "seed-g1",
+        createdAt: "2026-11-20T12:00:00.000Z",
+        senderRole: "giftee",
+        text: "Hi Secret Santa! I wear a medium tee."
+      },
+      {
+        id: "seed-g2",
+        createdAt: "2026-11-20T12:04:00.000Z",
+        senderRole: "giftee",
+        text: "Snacks make me happier than a mug, just so you know."
+      }
+    ],
+    "demo:santa": [
+      {
+        id: "seed-s1",
+        createdAt: "2026-11-20T12:08:00.000Z",
+        senderRole: "santa",
+        text: "Hey! Any hints for your gift, or a wish list I can peek at?"
+      },
+      {
+        id: "seed-s2",
+        createdAt: "2026-11-20T12:11:00.000Z",
+        senderRole: "santa",
+        text: "No rush — I just want it to feel like you."
+      }
+    ]
+  };
+
+  // "demo:giftee" is Demo Friend A's wish list, shown only to Demo Guest as their santa.
+  const SEED_WISHLISTS = {
+    demo: "Warm socks and something a bit silly.",
+    "demo:giftee": "A funny snack haul. Medium tee if you’re getting clothes."
+  };
+
   function readBringing() {
     try {
       return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
@@ -35,6 +77,74 @@
 
   function writeBringing(map) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+  }
+
+  function readJson(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw == null) return null;
+      return JSON.parse(raw);
+    } catch {
+      return fallback;
+    }
+  }
+
+  function writeJson(key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+
+  function readMessages() {
+    const stored = readJson(MSG_KEY, null);
+    if (stored && typeof stored === "object") return stored;
+    const seed = {
+      "demo:giftee": SEED_MESSAGES["demo:giftee"].map((m) => ({ ...m })),
+      "demo:santa": SEED_MESSAGES["demo:santa"].map((m) => ({ ...m }))
+    };
+    writeJson(MSG_KEY, seed);
+    return seed;
+  }
+
+  function writeMessages(map) {
+    writeJson(MSG_KEY, map);
+  }
+
+  function readWishlists() {
+    const stored = readJson(WISH_KEY, null);
+    if (stored && typeof stored === "object") return stored;
+    const seed = { ...SEED_WISHLISTS };
+    writeJson(WISH_KEY, seed);
+    return seed;
+  }
+
+  function writeWishlists(map) {
+    writeJson(WISH_KEY, map);
+  }
+
+  function threadKey(token, thread) {
+    return String(token || "").trim() + ":" + thread;
+  }
+
+  function presentMessage(token, thread, raw) {
+    const fromMe =
+      (thread === "giftee" && raw.senderRole === "santa") ||
+      (thread === "santa" && raw.senderRole === "giftee");
+    let authorLabel;
+    if (fromMe) {
+      authorLabel = "You";
+    } else if (thread === "giftee") {
+      const guest = DEMO_GUESTS[token];
+      authorLabel = (guest && guest.secretSantaFor) || "Your giftee";
+    } else {
+      authorLabel = "Your Secret Santa 🎅";
+    }
+    return {
+      id: raw.id,
+      createdAt: raw.createdAt,
+      text: raw.text,
+      fromMe,
+      role: raw.senderRole,
+      authorLabel
+    };
   }
 
   const adapter = {
@@ -103,6 +213,74 @@
         provisions: HOST_PROVISIONS,
         alcoholNote: "Jack covers alcohol."
       });
+    },
+    listMessages(token, thread, since) {
+      const key = String(token || "").trim();
+      if (!DEMO_GUESTS[key]) {
+        return Promise.resolve({ ok: false, reason: "not-found" });
+      }
+      if (thread !== "giftee" && thread !== "santa") {
+        return Promise.resolve({ ok: false, reason: "invalid", message: "Unknown thread." });
+      }
+      const all = readMessages()[threadKey(key, thread)] || [];
+      const sinceAt = since ? String(since) : "";
+      const messages = all
+        .filter((m) => !sinceAt || m.createdAt > sinceAt)
+        .map((m) => presentMessage(key, thread, m));
+      return Promise.resolve({ ok: true, thread, messages });
+    },
+    sendMessage(token, thread, text) {
+      const key = String(token || "").trim();
+      if (!DEMO_GUESTS[key]) {
+        return Promise.resolve({ ok: false, reason: "not-found" });
+      }
+      if (thread !== "giftee" && thread !== "santa") {
+        return Promise.resolve({ ok: false, reason: "invalid", message: "Unknown thread." });
+      }
+      const body = String(text || "").trim();
+      if (!body) {
+        return Promise.resolve({ ok: false, reason: "invalid", message: "Write a message first." });
+      }
+      if (body.length > 400) {
+        return Promise.resolve({ ok: false, reason: "invalid", message: "That’s a bit long — try under 400 characters." });
+      }
+      const map = readMessages();
+      const tid = threadKey(key, thread);
+      if (!map[tid]) map[tid] = [];
+      const raw = {
+        id: "m-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8),
+        createdAt: new Date().toISOString(),
+        senderRole: thread === "giftee" ? "santa" : "giftee",
+        text: body
+      };
+      map[tid].push(raw);
+      writeMessages(map);
+      return Promise.resolve({ ok: true, message: presentMessage(key, thread, raw) });
+    },
+    getWishlist(token, scope) {
+      const key = String(token || "").trim();
+      if (!DEMO_GUESTS[key]) {
+        return Promise.resolve({ ok: false, reason: "not-found" });
+      }
+      const which = scope === "giftee" ? "giftee" : "mine";
+      const wishes = readWishlists();
+      const text = which === "giftee" ? (wishes[threadKey(key, "giftee")] || "") : (wishes[key] || "");
+      return Promise.resolve({ ok: true, scope: which, text });
+    },
+    setWishlist(token, text) {
+      const key = String(token || "").trim();
+      if (!DEMO_GUESTS[key]) {
+        return Promise.resolve({ ok: false, reason: "not-found" });
+      }
+      const body = String(text || "").trim();
+      if (body.length > 400) {
+        return Promise.resolve({ ok: false, reason: "invalid", message: "That’s a bit long — try under 400 characters." });
+      }
+      const wishes = readWishlists();
+      if (body) wishes[key] = body;
+      else delete wishes[key];
+      writeWishlists(wishes);
+      return Promise.resolve({ ok: true, text: body });
     }
   };
 

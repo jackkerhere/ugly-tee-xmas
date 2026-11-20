@@ -33,7 +33,12 @@
     saveBringing: (token, payload) => current().saveBringing(token, payload),
     clearBringing: (token) => current().clearBringing(token),
     listMenuItems: () => current().listMenuItems(),
-    listHostProvisions: () => current().listHostProvisions()
+    listHostProvisions: () => current().listHostProvisions(),
+    // Chat / wish list. UI may poll listMessages(token, thread, since).
+    listMessages: (token, thread, since) => current().listMessages(token, thread, since),
+    sendMessage: (token, thread, text) => current().sendMessage(token, thread, text),
+    getWishlist: (token, scope) => current().getWishlist(token, scope),
+    setWishlist: (token, text) => current().setWishlist(token, text)
   };
 
   global.InviteData = api;
