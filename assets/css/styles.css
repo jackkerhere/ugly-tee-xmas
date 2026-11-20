@@ -457,6 +457,12 @@ main { padding-bottom: 4rem; }
   font-weight: 600;
   font-size: 0.95rem;
 }
+.time-when { white-space: nowrap; }
+.time-note {
+  font-size: 0.82em;
+  font-weight: 500;
+  opacity: 0.75;
+}
 .timeline h3 { color: var(--cream); font-size: 1.25rem; margin: 0.1rem 0; }
 .timeline p { margin: 0.15rem 0 0; color: rgba(251,246,236,0.78); }
 
