@@ -563,12 +563,13 @@
   function guestFaceHtml(name, opts) {
     opts = opts || {};
     const slug = guestSlug(name);
+    const portraitSlug = slug === "zheng-yang" ? "zhen-yang" : slug;
     const wrapClass = "who-face-wrap" + (opts.className ? " " + opts.className : "");
-    if (!FACE_SLUGS[slug]) {
+    if (!FACE_SLUGS[portraitSlug]) {
       return `<span class="${wrapClass}"><span class="who-face is-placeholder" aria-hidden="true">🧝</span></span>`;
     }
     const sizes = opts.sizes || "(min-width: 1280px) 180px, (min-width: 800px) 22vw, 42vw";
-    const base = "assets/faces/" + slug;
+    const base = "assets/faces/" + portraitSlug;
     const lock = opts.claimed ? '<span class="who-lock" aria-hidden="true">🔒</span>' : "";
     const alt = name ? escapeAttr(name) : "";
     return `<span class="${wrapClass}">
