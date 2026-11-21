@@ -111,7 +111,7 @@
   function guideInnerHtml() {
     const roles = [
       ["Bad", [
-        ["grinch", "Grinch ×2", "Each night the Grinches steal one person, together. They win when living Grinches are at least as many as everyone else still standing (Krampus counts as not a Grinch)."],
+        ["grinch", "Grinch", "Each night the Grinches steal one person, together. They win when living Grinches are at least as many as everyone else still standing (Krampus counts as not a Grinch)."],
         ["tough_grinch", "Tough Grinch", "A Grinch with two lives. The Elf Detective sees them as bad. The first unexplained hit only knocks a life off — they stay in the game, and nobody is told why."],
         ["krampus", "Krampus", "Plays alone, steals one person each night, one life. Wins only if last standing. Not a Grinch: if the Grinches hit their numbers, they win even if Krampus is still around. The Detective sees them as bad."]
       ]],
