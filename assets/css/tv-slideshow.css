@@ -1,0 +1,185 @@
+.tv-music-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 0.75rem;
+  margin: 0 auto 0.45rem;
+}
+
+.tv-music-status {
+  font-size: 0.9rem;
+}
+
+.page-tv:has(.tv-slideshow) main.section {
+  padding-top: clamp(0.75rem, 2.8vh, 1.75rem);
+}
+
+.tv-slideshow {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1.2rem, 4.9vw, 4.5rem);
+  min-block-size: clamp(16rem, 51vh, 28rem);
+  width: min(100%, 65rem);
+  margin: 0 auto;
+  padding: clamp(1.2rem, 4vw, 3rem);
+  border: 1px solid #e4c7857a;
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 50% 130%, #8b516b 0%, #403b67 38%, transparent 67%),
+    linear-gradient(155deg, #152a49, #151d36 74%);
+  box-shadow: 0 16px 50px #0005, inset 0 1px #fff2;
+  color: var(--cream);
+  text-align: center;
+  overflow: hidden;
+}
+
+.tv-slideshow::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.55;
+  background-image:
+    radial-gradient(circle, #ffe6af 0 1px, transparent 2px),
+    radial-gradient(circle, #ffe6af90 0 1px, transparent 2px);
+  background-position: 0.5rem 0.2rem, 1.9rem 2.8rem;
+  background-size: 7.2rem 8.1rem, 11.3rem 7.7rem;
+  mask-image: radial-gradient(ellipse at center, transparent 25%, #000 85%);
+}
+
+.tv-slideshow[data-slide="ghost"] {
+  background:
+    radial-gradient(ellipse at 27% 50%, #44818488, transparent 63%),
+    linear-gradient(155deg, #142c42, #161b35 74%);
+}
+
+.tv-slideshow[data-slide="survived"],
+.tv-slideshow[data-slide="quiet"] {
+  background:
+    radial-gradient(ellipse at 40% 120%, #79614b89, transparent 70%),
+    linear-gradient(155deg, #363b57, #172039 74%);
+}
+
+.tv-slide-content {
+  min-width: 0;
+  max-width: 52ch;
+  animation: concerto-tv-copy 420ms ease-out both;
+}
+
+.tv-slide-kicker {
+  margin: 0 0 0.6rem;
+  color: #f9dc9b;
+  font-weight: 850;
+  font-size: clamp(0.8rem, 1.6vw, 1.15rem);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.tv-slide-title {
+  margin: 0;
+  font-size: clamp(1.85rem, 4.7vw, 4.4rem);
+  line-height: 1.02;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.tv-slide-copy {
+  margin: 0.7rem auto 0;
+  max-width: 40ch;
+  color: #fff8e8;
+  font-size: clamp(1.15rem, 2.6vw, 2.1rem);
+  line-height: 1.35;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+
+.tv-slide-copy:only-child {
+  margin-top: 0;
+}
+
+.tv-slide-portrait {
+  position: relative;
+  flex: 0 0 auto;
+  inline-size: clamp(10rem, 20vw, 16rem);
+  animation: concerto-tv-portrait 520ms ease-out both;
+}
+
+.tv-slide-portrait .who-face-wrap {
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.tv-slide-portrait .who-face {
+  border-color: #fff1cb;
+  box-shadow: 0 10px 22px #0006;
+}
+
+.tv-slideshow[data-slide="ghost"] .who-face {
+  border-color: #c7fff1;
+  box-shadow: 0 0 48px #a3fbec54, 0 10px 22px #0006;
+}
+
+.tv-slide-ghost {
+  position: absolute;
+  right: -0.6rem;
+  top: -0.6rem;
+  width: 2.75rem;
+  height: 3.15rem;
+  border: 2px solid #f1fff9;
+  border-radius: 55% 55% 35% 27%;
+  background: #cbfff3;
+  box-shadow: 0 0 1rem #b8f9e9ab;
+  transform: rotate(10deg);
+}
+
+.tv-slide-ghost::before {
+  content: "";
+  position: absolute;
+  top: 0.85rem;
+  left: 0.68rem;
+  width: 0.35rem;
+  height: 0.46rem;
+  border-radius: 50%;
+  background: #24445b;
+  box-shadow: 0.82rem 0 #24445b;
+}
+
+@keyframes concerto-tv-copy {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes concerto-tv-portrait {
+  from { opacity: 0; transform: translateY(0.55rem) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 699px) {
+  .tv-slideshow {
+    flex-direction: column;
+    gap: 1rem;
+    min-block-size: 16rem;
+  }
+
+  .tv-slide-portrait {
+    inline-size: min(100%, 9.25rem);
+  }
+
+  .tv-slide-ghost {
+    transform: rotate(10deg) scale(0.85);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tv-slide-content,
+  .tv-slide-portrait {
+    animation: none;
+  }
+}

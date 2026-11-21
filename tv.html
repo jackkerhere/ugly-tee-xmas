@@ -21,6 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/styles.css?v=20261121-game-lobby">
+  <link rel="stylesheet" href="assets/css/tv-slideshow.css?v=20261121-tv-slideshow">
   <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="assets/images/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
@@ -50,6 +51,10 @@
   </header>
 
   <main id="main" class="section">
+    <div class="tv-music-controls">
+      <button type="button" class="btn btn-gold" id="tv-music-toggle">Play background music</button>
+      <p id="tv-music-status" class="tv-music-status" role="status"></p>
+    </div>
     <div id="tv-root">
       <p class="lede" style="text-align:center">The game will appear here.</p>
     </div>
@@ -60,15 +65,12 @@
   </footer>
 
   </div>
-  <audio id="site-song" src="assets/song.mp3" preload="auto" loop playsinline></audio>
-  <button type="button" class="mute-fab" id="mute-fab" hidden aria-label="Mute song" aria-pressed="false"></button>
-  <div class="resume-bar" id="resume-song" hidden>
-    <button type="button" class="btn btn-gold" id="resume-song-btn">Tap to keep the music going</button>
-  </div>
+  <audio id="tv-background-music" src="assets/song.mp3" preload="auto" loop playsinline></audio>
   <script src="assets/js/data.js?v=20261121-game-lobby" defer></script>
   <script src="assets/js/adapters/mock.js?v=20261121-game-lobby" defer></script>
   <script src="assets/js/adapters/supabase.js?v=20261121-game-lobby" defer></script>
-  <script src="assets/js/game.js?v=20261121-game-lobby" defer></script>
-  <script src="assets/js/main.js?v=20261121-game-lobby" defer></script>
+  <script src="assets/js/tv-slideshow.js?v=20261121-tv-slideshow" defer></script>
+  <script src="assets/js/game.js?v=20261121-tv-slideshow" defer></script>
+  <script src="assets/js/main.js?v=20261121-tv-slideshow" defer></script>
 </body>
 </html>

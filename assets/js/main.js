@@ -67,7 +67,7 @@
       path = path.slice(0, qAt);
     }
     const params = new URLSearchParams(query);
-    if (clearToken || pageKey(href) === "game") params.delete("k");
+    if (clearToken || ["game", "tv"].includes(pageKey(href))) params.delete("k");
     else if (k) params.set("k", k);
     if (demo) params.set("demo", "1");
     const qs = params.toString();
@@ -1553,11 +1553,12 @@
       if (e.defaultPrevented || e.button !== 0) return;
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       const a = e.target.closest && e.target.closest("a[href]");
-      if (!a) return;
+      if (!a || (a.target && a.target !== "_self")) return;
       const href = a.getAttribute("href");
       if (!isSitePage(href)) return;
       const url = new URL(href, location.href);
       if (url.origin !== location.origin) return;
+      if (pageKey(url.href) === "tv" || pageKey(location.href) === "tv") return;
       // Same-page hash only
       if (url.pathname === location.pathname && url.search === location.search && url.hash) return;
       e.preventDefault();

@@ -4,7 +4,8 @@
  */
 (function (global) {
   const STORE_HOST = "uglytee-host-token";
-  const POLL_TV = 4000;
+  const POLL_HOST = 4000;
+  const POLL_TV = 1000;
   const POLL_PLAYER = 5000;
   let pollTimer = null;
   let pollOnVisible = null;
@@ -666,7 +667,7 @@
       return;
     }
     refreshHost(root, true);
-    startPoll(() => refreshHost(root, false), POLL_TV);
+    startPoll(() => refreshHost(root, false), POLL_HOST);
   }
 
   function renderHostLogin(root) {
@@ -789,7 +790,8 @@
     }
     if (d.phase === "reveal") {
       mid += `<div class="card"><button type="button" class="btn btn-gold btn-shuffle" id="host-advance">Next beat</button>
-        <p class="game-muted">Feed the TV one line at a time. Sell the pause.</p></div>`;
+        <p class="form-status" id="game-status" role="status" hidden></p>
+        <p class="game-muted">Advance one TV beat at a time.</p></div>`;
     } else if (d.phase === "twist") {
       mid += `<div class="card"><h3>Optional twist</h3><p>One card a day, or skip.</p>
         <div class="game-twist-grid">${twists.map((t) =>
@@ -819,15 +821,14 @@
       ${revealHtml(d)}
       ${mid}
       ${rosterHtml(d.players)}
-      <p class="game-docs-note"><a href="tv.html">Open the TV screen</a> · <a href="guide.html">Character Guide</a> · <a href="how-to-play.html">How to Play</a></p>
+      <p class="game-docs-note"><a href="tv.html" target="_blank" rel="noopener">Open the TV screen</a> · <a href="guide.html">Character Guide</a> · <a href="how-to-play.html">How to Play</a></p>
       <p class="logout-line"><a href="host.html" id="host-logout">Log out of host screen</a></p>
     `;
 
     bindHostSetup(root, "#host-shuffle", () => a.gameHostDealLobby(ht), "Couldn’t shuffle. Try again.");
     bindHostSetup(root, "#host-start", () => a.gameHostStart(ht), "Couldn’t start the story. Try again.");
     bindHostSetup(root, "#host-new-lobby", () => a.gameHostReset(ht), "Couldn’t open a new lobby. Try again.");
-    const adv = $("#host-advance", root);
-    if (adv) adv.addEventListener("click", () => a.gameHostAdvance(ht).then(() => { lastSig = ""; refreshHost(root, true); }));
+    bindHostSetup(root, "#host-advance", () => a.gameHostAdvance(ht), "Couldn’t advance the reveal. Try again.");
     const skip = $("#host-skip-twist", root);
     if (skip) skip.addEventListener("click", () => a.gameHostSkipTwist(ht).then(() => { lastSig = ""; refreshHost(root, true); }));
     $allC("[data-twist]", root).forEach((btn) => {
@@ -869,36 +870,81 @@
   }
 
   /* ---------- TV ---------- */
+  function bindTvMusic() {
+    const audio = $("#tv-background-music");
+    const button = $("#tv-music-toggle");
+    const status = $("#tv-music-status");
+    if (!audio || !button || button.dataset.bound) return;
+    button.dataset.bound = "true";
+    audio.volume = 0.3;
+
+    const sync = () => {
+      button.textContent = audio.paused ? "Play background music" : "Pause background music";
+    };
+    audio.addEventListener("play", sync);
+    audio.addEventListener("pause", sync);
+    button.addEventListener("click", async () => {
+      if (status) status.textContent = "";
+      if (!audio.paused) {
+        audio.pause();
+        return;
+      }
+      try {
+        await audio.play();
+      } catch (_) {
+        if (status) status.textContent = "Music couldn’t start. Try pressing Play again.";
+      }
+      sync();
+    });
+    sync();
+  }
+
   function renderTv(root) {
     if (!root) return;
-    lastSig = "";
+    bindTvMusic();
+    const slideshow = global.ConcertoTvSlideshow;
+    let signature = "";
+    let fetching = false;
+    const data = api();
+    if (slideshow && data && data.listGuestsPublic) {
+      data.listGuestsPublic().then((result) => {
+        if (result && result.ok) slideshow.preload(result.guests || [], face);
+      }).catch(() => {});
+    }
+
     const paint = (d) => {
-      const waiting = !d || !d.dealt;
+      const waiting = !d.dealt;
+      const reveal = slideshow ? slideshow.render(d, { face, escapeHtml }) : "";
+      const phaseText = d.phase === "gingerbread" ? "The village waits" : phaseLabel(d);
+      const rosterReady = d.phase !== "reveal" || Number.isInteger(d.reveal?.current?.beatCount);
       root.innerHTML = `
         <div class="tv-frame">
           <p class="kicker">Who Stole Christmas?</p>
-          <h1 class="tv-title outline-red">${escapeHtml(phaseLabel(d || {}))}</h1>
-          ${waiting ? '<p class="tv-wait">Roles haven’t been dealt yet. Waiting for the host to shuffle… 🎁</p>' : ""}
-          ${revealHtml(d || {})}
-          ${d && d.winnerText ? `<p class="tv-winner">${escapeHtml(d.winnerText)}</p>` : ""}
-          ${d && d.snowmanWon && d.phase !== "ended" ? '<p class="tv-winner">The Snowman already won — and the game goes on.</p>' : ""}
-          <h2 class="tv-sub">Who’s in</h2>
-          ${rosterHtml((d && d.players) || [], { faces: true })}
+          <h1 class="tv-title outline-red">${escapeHtml(phaseText)}</h1>
+          ${waiting ? '<p class="tv-wait">Waiting for the host to shuffle…</p>' : ""}
+          ${reveal}
+          ${d.phase === "ended" && d.winnerText ? `<p class="tv-winner">${escapeHtml(d.winnerText)}</p>` : ""}
+          ${rosterReady ? '<h2 class="tv-sub">Who’s in</h2>' + rosterHtml(d.players || [], { faces: true }) : ""}
           <p class="tv-docs"><a href="how-to-play.html">How to Play</a> · <a href="guide.html">Character Guide</a></p>
         </div>`;
     };
-    const tick = () => {
-      const a = api();
-      if (!a || !a.gamePublic) { paint({ dealt: false, phase: "not_started" }); return Promise.resolve(); }
-      return a.gamePublic().then((d) => {
-        const sig = JSON.stringify({
-          p: d && d.phase, s: d && d.reveal && d.reveal.sceneIndex,
-          b: d && d.reveal && d.reveal.beatIndex, deal: d && d.dealt, w: d && d.winnerSide
-        });
-        if (sig === lastSig) return;
-        lastSig = sig;
+
+    const tick = async () => {
+      if (!data || !data.gamePublic || fetching || document.hidden || !root.isConnected) return;
+      fetching = true;
+      try {
+        const d = await data.gamePublic();
+        if (!d || !d.ok || !root.isConnected) return;
+        if (slideshow) slideshow.preload(d.players || [], face);
+        const next = JSON.stringify([d.phase, d.dealt, d.nightNumber, d.dayNumber, d.reveal, d.winnerText, d.players]);
+        if (next === signature) return;
+        signature = next;
         paint(d);
-      }).catch(() => {});
+      } catch (_) {
+        // Keep the last visible slide if the connection drops.
+      } finally {
+        fetching = false;
+      }
     };
     paint({ dealt: false, phase: "not_started" });
     tick();
