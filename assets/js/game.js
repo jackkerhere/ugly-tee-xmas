@@ -196,7 +196,7 @@
       <header class="guide-hero">
         <p class="kicker">Ugly Tee Christmas</p>
         <h1 class="outline-red">Who Stole Christmas?</h1>
-        <p class="lede">A Mafia-style party game with cliffhangers, mysterious rescues, and optional plot twists. Roles stay secret until the host shuffles — and even then, you only see your own.</p>
+        <p class="lede">A Mafia-style party game.</p>
       </header>
       <div id="game-play-root"></div>
       <div class="game-hub-grid">
