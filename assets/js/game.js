@@ -117,7 +117,7 @@
 
   const GUIDE_DETAILS = {
     "grinch": {
-      "description": "Every December, Concerto lights its lanterns and starts singing. The Grinch hates both. So every Christmas, they come down from the hills to spoil the celebrations. This year, they brought help.",
+      "description": "Concerto is Santa’s home, and nowhere loves Christmas more. For years, the Grinches tried to ruin it. They stole the bells and salted the hot chocolate. Every year, the village celebrated anyway. This year, the Grinches moved to Concerto and started posing as neighbours. Now they’re trying to steal Christmas right from under Santa’s nose.",
       "abilities": [
         "Each night, choose one target together with the other Grinches."
       ],
