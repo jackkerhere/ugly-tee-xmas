@@ -109,7 +109,7 @@
   }
 
   const GUIDE_GROUPS = [
-    ["Concertorants", "town", ["santa", "reindeer", "detective", "mrs_claus", "gingerbread", "fruitcake", "witness", "liar_elf", "citizen"]],
+    ["Concertorants", "town", ["santa", "reindeer", "detective", "mrs_claus", "gingerbread", "fruitcake", "liar_elf", "citizen"]],
     ["Grinches", "grinches", ["grinch", "tough_grinch"]],
     ["Wanderers", "wanderers", ["krampus", "snowman"]],
     ["Ghosts", "ghosts", ["ghost"]]
@@ -127,7 +127,7 @@
       "description": "The Tough Grinch helped carry the stolen presents out of Concerto in a single sack. When the sack split halfway up the hill, they carried the presents the rest of the way anyway.",
       "abilities": [
         "Choose one target together with the other Grinches each night.",
-        "Your extra life lets you survive your first night hit. The village is kept in the dark about how you survived."
+        "Your extra life protects you from one night hit. How you survived stays secret. If the village votes you out, you become a ghost immediately."
       ],
       "winCondition": "The Grinches win when they match or outnumber all other living players combined."
     },
@@ -174,14 +174,7 @@
       "description": "This Fruitcake has survived three Christmas markets, a week on the post office shelf, and a family that keeps wrapping it up again. A little trouble in Concerto hardly seems worth mentioning.",
       "abilities": [
         "You have no special night action.",
-        "Your extra life lets you survive your first night hit. The village is kept in the dark about how you survived."
-      ],
-      "winCondition": "The Concertorants win when every Grinch and Krampus is out."
-    },
-    "witness": {
-      "description": "Someone was still awake when a figure slipped out of the square with a sack. The Witness got a good look and spent the rest of the night deciding how much to say.",
-      "abilities": [
-        "On the first night, you learn the name of one Grinch. You may drop hints, but you must keep their name to yourself."
+        "Your extra life protects you from one night hit. How you survived stays secret. If the village votes you out, you become a ghost immediately."
       ],
       "winCondition": "The Concertorants win when every Grinch and Krampus is out."
     },
@@ -312,15 +305,15 @@
         <p class="lede">A comedic Christmas murder mystery at Brenda and Jack’s. Someone stole Christmas. You have ugly tees, snacks, and one job: figure it out — or get away with it.</p>
       </header>
       <ol class="howto-steps">
-        <li><h3>Setup</h3><p>Open the <a href="game.html">Game tab</a>, sign in, and tap <strong>Join lobby</strong>. Jack hosts. The lobby takes 5 to 15 players and closes when Jack shuffles. With 14 players, the game adds one Citizen. With 15 players, it adds two. You see your own card after the shuffle.</p></li>
+        <li><h3>Setup</h3><p>Open the <a href="game.html">Game tab</a>, sign in, and tap <strong>Join lobby</strong>. Jack hosts. The lobby takes 5 to 15 players and closes when Jack shuffles. The 13-player deck includes two Fruitcakes. The game adds one Citizen at 14 players and two at 15. You see your own card after the shuffle.</p></li>
         <li><h3>Night</h3><p>Everyone still in the game locks in something on their phone — even if your role has no power — so nobody can tell who is acting. Submissions are locked. The Grinches steal together; Krampus steals alone; Santa, the Reindeer, the Detective and Mrs Claus do their quiet festive work.</p></li>
-        <li><h3>Morning reveal</h3><p>The TV tells it like a cliffhanger: someone is on the brink… then BAM, they’re out, or a mysterious rescue saves them. The host advances the story beat by beat. If someone lives, nobody is told why (a save, or a second life — same vibe, no credits).</p></li>
-        <li><h3>Day vote</h3><p>Talk, accuse, then vote. A tie means nobody is out. There is a near-miss pause before the result. If the Snowman is voted out, they wanted this, they win, and the game continues. Anyone who is out takes a shot or a gachapon capsule.</p></li>
+        <li><h3>Morning reveal</h3><p>The TV tells it like a cliffhanger: someone is on the brink… then BAM, they’re out, or a mysterious rescue saves them. The host advances the story beat by beat. If someone survives a night hit, the reason stays secret. The Tough Grinch and both Fruitcakes can each survive one night hit.</p></li>
+        <li><h3>Day vote</h3><p>Talk, accuse, then vote. The player who gets the most votes becomes a ghost immediately, even with an extra life. Everyone stays in on a tie. If the Snowman is voted out, they wanted this, they win, and the game continues. Anyone who is out takes a shot or a gachapon capsule.</p></li>
         <li><h3>Ghosts</h3><p>Out players haunt, request a killer clue, may possess one vote once a game, and can predict the winning side.</p></li>
         <li><h3>Twists</h3><p>Once a day the host may play one optional Twist card (or skip): Blizzard, Naughty List Leak, Secret Recount, Gift Swap, Egg-nog Hangover, or Ugly Tee Audit. The TV gets a dramatic reveal. The host can always skip.</p></li>
         <li><h3>How to win</h3><p><strong>Nice</strong> win when every Grinch and Krampus is out. <strong>Grinches</strong> win when living Grinches are at least as many as everyone else still alive (Krampus counts as not a Grinch). <strong>Krampus</strong> wins only if last standing. The Snowman’s win does not end the game.</p></li>
       </ol>
-      <p class="howto-foot">Fewer than 13 players? Nice roles drop in this order: Liar Elf, Witness, Reindeer, Fruitcake, Gingerbread Man, Mrs Claus, then Snowman, then one regular Grinch. The host needs at least 5 players.</p>
+      <p class="howto-foot">The game uses a smaller deck for groups of 5 to 12 players.</p>
       ${docsHtml({ backGame: true })}
     `;
   }
@@ -714,7 +707,7 @@
         return `<div class="card game-action"><h3>You cannot vote today</h3><p>${why} has you sitting this one out. Enjoy the show. Or don’t.</p></div>`;
       }
       return `<div class="card game-action"><h3>Day vote</h3>
-        <p>Pick someone still in the game.</p>
+        <p>Pick someone still in the game. The player with the most votes becomes a ghost, even with an extra life. A tie keeps everyone in.</p>
         ${d.locked ? "<p>Locked in. Wait for the host.</p>" : pickGrid(living, pickId, you.id) + '<button class="btn btn-gold" type="button" id="game-lock">Lock in your vote</button>'}
         <p class="form-status" id="game-status" hidden></p></div>`;
     }
