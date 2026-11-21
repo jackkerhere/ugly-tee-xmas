@@ -24,6 +24,7 @@
     fruitcake: { icon: "🍰", name: "Fruitcake", side: "Nice" },
     witness: { icon: "👀", name: "Witness", side: "Nice" },
     liar_elf: { icon: "🤥", name: "Liar Elf", side: "Nice" },
+    citizen: { icon: "🎄", name: "Citizen", side: "Nice" },
     snowman: { icon: "⛄", name: "Snowman", side: "Alone" }
   };
 
@@ -106,7 +107,8 @@
         ["🍪", "Gingerbread Man", "No night power while in the game. When out, they pick one player to take down with them."],
         ["🍰", "Fruitcake", "Two lives, no night power. The first unexplained hit costs a life and they stay in. Nobody is told why they survived."],
         ["👀", "Witness", "On night 1 they are shown one Grinch. They may only hint — they must not say the name outright."],
-        ["🤥", "Liar Elf", "No night power. They may only lie. If they tell the truth, they’re out."]
+        ["🤥", "Liar Elf", "No night power. They may only lie. If they tell the truth, they’re out."],
+        [ROLE_META.citizen.icon, ROLE_META.citizen.name, "Votes during the day and checks in at night. Has no special powers."]
       ]],
       ["Alone", [
         ["⛄", "Snowman", "Wins if the group votes them out. The game then continues for everyone else. Being stolen at night does not count."]
@@ -155,7 +157,7 @@
         <p class="lede">A comedic Christmas murder mystery at Brenda and Jack’s. Someone stole Christmas. You have ugly tees, snacks, and one job: figure it out — or get away with it.</p>
       </header>
       <ol class="howto-steps">
-        <li><h3>Setup</h3><p>One guest is the host and does not play. The other players open My page → Game. Until the host taps the big <strong>Shuffle roles</strong> button, nobody has a role. After the shuffle, you only ever see your own card. The host may shuffle again until they start the story.</p></li>
+        <li><h3>Setup</h3><p>One guest is the host and does not play. The host selects who is playing. Players open My page → Game. Until the host taps <strong>Shuffle roles</strong>, nobody has a role. With 14 players, the game adds one Citizen. With 15 players, it adds two. After the shuffle, you only ever see your own card. The host may shuffle again until they start the story.</p></li>
         <li><h3>Night</h3><p>Everyone still in the game locks in something on their phone — even if your role has no power — so nobody can tell who is acting. Submissions are locked. The Grinches steal together; Krampus steals alone; Santa, the Reindeer, the Detective and Mrs Claus do their quiet festive work.</p></li>
         <li><h3>Morning reveal</h3><p>The TV tells it like a cliffhanger: someone is on the brink… then BAM, they’re out, or a mysterious rescue saves them. The host advances the story beat by beat. If someone lives, nobody is told why (a save, or a second life — same vibe, no credits).</p></li>
         <li><h3>Day vote</h3><p>Talk, accuse, then vote. A tie means nobody is out. There is a near-miss pause before the result. If the Snowman is voted out, they wanted this, they win, and the game continues. Anyone who is out takes a shot or a gachapon capsule.</p></li>
@@ -550,61 +552,43 @@
     const a = api();
     root.innerHTML = `<div class="card game-host-login">
       <h1>Host screen</h1>
-      <p>You’re the narrator, not a player. Log in with your name and PIN. Optionally set a host PIN so you can reopen this screen later.</p>
+      <p>Jack, sign in with the 6-digit PIN you use on My page.</p>
       <form id="host-login">
-        <label for="host-guest">Your name</label>
-        <select id="host-guest" required></select>
         <label for="host-pin">Your 6-digit PIN</label>
-        <input id="host-pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" required>
-        <label for="host-extra">Host PIN for this screen <span style="font-weight:400">(optional)</span></label>
-        <input id="host-extra" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" placeholder="Set or enter a host PIN">
-        <button class="btn btn-gold" type="submit">Open host screen</button>
+        <input id="host-pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off" required>
+        <button class="btn btn-gold" type="submit" disabled>Open host screen</button>
         <p class="form-status" id="game-status" hidden></p>
       </form>
     </div>`;
     if (!a) return;
+    const form = $("#host-login", root);
+    const submit = $("button[type=submit]", form);
+    let hostId = "";
     a.listGuestsPublic().then((res) => {
-      const sel = $("#host-guest", root);
-      if (!sel || !res || !res.ok) return;
-      sel.innerHTML = (res.guests || []).filter((g) => !g.is_test || true).map((g) =>
-        `<option value="${escapeHtml(g.id)}">${escapeHtml(g.display_name)}${g.claimed ? "" : " (not claimed yet)"}</option>`
-      ).join("");
-    });
-    $("#host-login", root).addEventListener("submit", (e) => {
+      const hosts = (res && res.ok ? res.guests || [] : []).filter((g) =>
+        g.display_name === "Jack" && !g.is_demo && !g.is_test
+      );
+      if (hosts.length === 1) {
+        hostId = hosts[0].id;
+        submit.disabled = false;
+      } else {
+        setStatus(root, "Could not load Jack’s guest account. Reload to try again.", false);
+      }
+    }).catch(() => setStatus(root, "Could not load Jack’s guest account. Reload to try again.", false));
+    form.addEventListener("submit", (e) => {
       e.preventDefault();
-      const id = $("#host-guest", root).value;
+      if (submit.disabled) return;
       const pin = $("#host-pin", root).value;
-      const extra = ($("#host-extra", root).value || "").trim();
-      const go = () => {
-        // Prefer host-PIN login first if 6 digits typed in extra-only? Try guest login then claim.
-        return a.loginWithPin(id, pin).then((res) => {
-          if (!res || !res.ok || !res.token) {
-            // maybe the host PIN is in the main field
-            return a.gameHostLogin(id, pin).then((h) => h);
-          }
-          return a.gameClaimHost(res.token, extra || null);
-        });
-      };
-      // If they only want to reopen with the host PIN, try that first when extra is filled and they reuse it.
-      const tryHost = extra && extra.length === 6 && extra === pin
-        ? a.gameHostLogin(id, pin)
-        : extra && extra.length === 6
-          ? go()
-          : go();
-      Promise.resolve(tryHost).then((res) => {
+      submit.disabled = true;
+      a.gameHostLogin(hostId, pin).then((res) => {
         if (res && res.ok && res.hostToken) {
           setHostToken(res.hostToken);
           renderHost(root);
           return;
         }
-        // last chance: host pin in the PIN field
-        return a.gameHostLogin(id, pin).then((h) => {
-          if (h && h.ok && h.hostToken) {
-            setHostToken(h.hostToken);
-            renderHost(root);
-          } else setStatus(root, (res && res.message) || (h && h.message) || "Could not open the host screen.", false);
-        });
-      }).catch(() => setStatus(root, "Could not open the host screen.", false));
+        setStatus(root, (res && res.message) || "Could not open the host screen.", false);
+      }).catch(() => setStatus(root, "Could not open the host screen.", false))
+        .finally(() => { submit.disabled = false; });
     });
   }
 
@@ -630,6 +614,62 @@
     }).catch(() => {});
   }
 
+  function mountHostRoster(root, d, adapter, hostToken) {
+    const fields = $("#host-roster", root);
+    if (!fields) return;
+
+    const buttons = $allC("#host-shuffle, #host-reshuffle", root);
+    const start = $("#host-start", root);
+    const count = $("#host-player-count", root);
+    const currentPlayers = new Set((d.players || []).map((player) => player.id));
+
+    adapter.listGuestsPublic().then((res) => {
+      if (fields !== $("#host-roster", root)) return;
+      if (!res || !res.ok) throw new Error("Could not load players.");
+
+      const guests = res.guests || [];
+      const host = guests.find((guest) => guest.display_name === d.hostName && !guest.is_demo && !guest.is_test);
+      if (!host) throw new Error("Could not load the host account.");
+      const players = guests.filter((guest) => guest.display_name && guest.id !== host.id && !guest.is_demo && !guest.is_test);
+      fields.innerHTML = `<legend>Players</legend><div class="game-pick-grid">${players.map((player) => `
+        <label class="game-pick"><input type="checkbox" value="${escapeHtml(player.id)}"${!d.dealt || currentPlayers.has(player.id) ? " checked" : ""}>
+        ${escapeHtml(player.display_name)}</label>`).join("")}</div>`;
+
+      const selected = () => $allC("input:checked", fields).map((input) => input.value);
+      const updateSelection = () => {
+        const ids = selected();
+        const valid = ids.length >= 5 && ids.length <= 15;
+        const hasChanges = d.dealt && (ids.length !== currentPlayers.size || ids.some((id) => !currentPlayers.has(id)));
+        count.textContent = `${ids.length} selected${!valid ? " · Choose 5 to 15 players" : hasChanges ? " · Shuffle to use this roster" : ""}`;
+        buttons.forEach((button) => { button.disabled = !valid; });
+        if (start) start.disabled = !valid || hasChanges;
+      };
+      fields.addEventListener("change", updateSelection);
+      updateSelection();
+
+      const shuffle = async () => {
+        const ids = selected();
+        buttons.forEach((button) => { button.disabled = true; });
+        if (start) start.disabled = true;
+        fields.disabled = true;
+        try {
+          const result = await adapter.gameHostDeal(hostToken, ids);
+          if (!result || !result.ok) throw new Error((result && result.message) || "Shuffle failed.");
+          lastSig = "";
+          await refreshHost(root, true);
+        } catch (err) {
+          setStatus(root, err.message || "Shuffle failed.", false);
+        } finally {
+          fields.disabled = false;
+          updateSelection();
+        }
+      };
+      buttons.forEach((button) => button.addEventListener("click", shuffle));
+    }).catch(() => {
+      if (fields === $("#host-roster", root)) count.textContent = "Could not load players. Reload the host screen to try again.";
+    });
+  }
+
   function paintHost(root, d) {
     const a = api();
     const ht = hostToken();
@@ -638,10 +678,11 @@
     let mid = "";
     if (d.canShuffle) {
       mid += `<div class="card game-shuffle-wrap">
-        <p class="lede">No roles exist until you hit this button. Players are waiting on their Game tab.</p>
-        <button type="button" class="btn btn-gold btn-shuffle" id="host-shuffle">Shuffle roles</button>
-        ${d.canReshuffle ? '<button type="button" class="btn btn-ghost" id="host-reshuffle">Shuffle again</button>' : ""}
-        ${d.canStart ? '<button type="button" class="btn btn-gold" id="host-start">Start the story</button>' : ""}
+        <fieldset id="host-roster" aria-describedby="host-player-count"><legend>Players</legend></fieldset>
+        <p class="game-muted" id="host-player-count" aria-live="polite">Loading players…</p>
+        <button type="button" class="btn btn-gold btn-shuffle" id="host-shuffle" disabled>Shuffle roles</button>
+        ${d.canReshuffle ? '<button type="button" class="btn btn-ghost" id="host-reshuffle" disabled>Shuffle again</button>' : ""}
+        ${d.canStart ? '<button type="button" class="btn btn-gold" id="host-start" disabled>Start the story</button>' : ""}
         <p class="form-status" id="game-status" hidden></p>
       </div>`;
     }
@@ -681,28 +722,7 @@
       <p class="logout-line"><a href="host.html" id="host-logout">Log out of host screen</a></p>
     `;
 
-    const sh = $("#host-shuffle", root) || $("#host-reshuffle", root);
-    const doShuffle = () => {
-      return a.listGuestsPublic().then((res) => {
-        const guests = res && res.guests || [];
-        const hostName = d.hostName;
-        const playable = guests.filter((g) => g.display_name && g.display_name !== hostName);
-        const hostIsTest = (guests.find((g) => g.display_name === hostName) || {}).is_test;
-        const ids = playable
-          .filter((g) => hostIsTest ? g.is_test : !g.is_test)
-          .map((g) => g.id);
-        if (ids.length < 5) {
-          setStatus(root, "Need at least 5 players besides the host.", false);
-          return { ok: false };
-        }
-        return a.gameHostDeal(ht, ids);
-      }).then((res) => {
-        if (!res || !res.ok) { setStatus(root, (res && res.message) || "Shuffle failed.", false); return; }
-        lastSig = "";
-        refreshHost(root, true);
-      });
-    };
-    $allC("#host-shuffle, #host-reshuffle", root).forEach((b) => b.addEventListener("click", doShuffle));
+    mountHostRoster(root, d, a, ht);
     const start = $("#host-start", root);
     if (start) start.addEventListener("click", () => a.gameHostStart(ht).then(() => { lastSig = ""; refreshHost(root, true); }));
     const adv = $("#host-advance", root);
