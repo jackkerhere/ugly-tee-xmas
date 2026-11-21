@@ -44,13 +44,13 @@
     }
 
     if (guestScenes.has(scene.kind)) {
-      if (lastBeat(scene, reveal) && scene.outcome === "tie") {
-        return slide("quiet", "No one was voted out.");
-      }
       const guest = (snapshot.players || []).find((player) => player.id === scene.targetId);
       const name = guest?.display_name;
       const subject = name || "A guest";
       if (lastBeat(scene, reveal)) {
+        if (scene.outcome === "spared") return slide("quiet", "Spare everyone won. No one was voted out.");
+        if (scene.outcome === "no_votes") return slide("quiet", "No votes were counted. No one was voted out.");
+        if (scene.outcome === "tie") return slide("quiet", "No one was voted out.");
         if (scene.outcome === "out" || scene.outcome === "snowman") {
           return slide("ghost", subject + " became a ghost.", "", name);
         }

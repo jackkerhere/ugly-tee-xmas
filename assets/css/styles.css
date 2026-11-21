@@ -1470,6 +1470,13 @@ html.is-shot *, html.is-shot *::before, html.is-shot *::after {
 }
 .game-pick.is-on { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,176,74,0.35); }
 .game-pick:disabled { opacity: 0.4; cursor: not-allowed; }
+.game-pick-spare {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 0.35rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
 .game-pick .who-face-wrap { width: 3.2rem; height: 3.2rem; margin: 0 auto 0.25rem; }
 .game-roster {
   list-style: none;

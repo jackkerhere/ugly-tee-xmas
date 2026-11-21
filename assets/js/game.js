@@ -7,9 +7,11 @@
   const POLL_HOST = 4000;
   const POLL_TV = 1000;
   const POLL_PLAYER = 5000;
+  const SPARE_VOTE = "spare";
   let pollTimer = null;
   let pollOnVisible = null;
   let lastSig = "";
+  let playerPickRound = "";
   let hostSetupPending = false;
   let pickId = "";
   let pickId2 = "";
@@ -308,7 +310,7 @@
         <li><h3>Setup</h3><p>Open the <a href="game.html">Game tab</a>, sign in, and tap <strong>Join lobby</strong>. Jack hosts. The lobby takes 5 to 15 players and closes when Jack shuffles. The 13-player deck includes two Fruitcakes. The game adds one Citizen at 14 players and two at 15. You see your own card after the shuffle.</p></li>
         <li><h3>Night</h3><p>Everyone still in the game locks in something on their phone — even if your role has no power — so nobody can tell who is acting. Submissions are locked. The Grinches steal together; Krampus steals alone; Santa, the Reindeer, the Detective and Mrs Claus do their quiet festive work.</p></li>
         <li><h3>Morning reveal</h3><p>The TV tells it like a cliffhanger: someone is on the brink… then BAM, they’re out, or a mysterious rescue saves them. The host advances the story beat by beat. If someone survives a night hit, the reason stays secret. The Tough Grinch and both Fruitcakes can each survive one night hit.</p></li>
-        <li><h3>Day vote</h3><p>Talk, accuse, then vote. The player who gets the most votes becomes a ghost immediately, even with an extra life. Everyone stays in on a tie. If the Snowman is voted out, they wanted this, they win, and the game continues. Anyone who is out takes a shot or a gachapon capsule.</p></li>
+        <li><h3>Day vote</h3><p>Discuss for 3 minutes, then vote for a player or choose <strong>Spare everyone</strong>. A player with the most votes becomes a ghost immediately, even with an extra life. Everyone stays in if Spare everyone wins, the top vote ties, or no votes are counted. If the Snowman is voted out, they wanted this, they win, and the game continues. Anyone who is out takes a shot or a gachapon capsule.</p></li>
         <li><h3>Ghosts</h3><p>Out players haunt, request a killer clue, may possess one vote once a game, and can predict the winning side.</p></li>
         <li><h3>Twists</h3><p>Once a day the host may play one optional Twist card (or skip): Blizzard, Naughty List Leak, Secret Recount, Gift Swap, Egg-nog Hangover, or Ugly Tee Audit. The TV gets a dramatic reveal. The host can always skip.</p></li>
         <li><h3>How to win</h3><p><strong>Nice</strong> win when every Grinch and Krampus is out. <strong>Grinches</strong> win when living Grinches are at least as many as everyone else still alive (Krampus counts as not a Grinch). <strong>Krampus</strong> wins only if last standing. The Snowman’s win does not end the game.</p></li>
@@ -616,7 +618,7 @@
       if (selfId && id === String(selfId)) return "";
       const on = selected && id === String(selected);
       const dis = block.has(id);
-      return `<button type="button" class="game-pick${on ? " is-on" : ""}" data-id="${escapeHtml(id)}" ${dis ? "disabled" : ""}>
+      return `<button type="button" class="game-pick${on ? " is-on" : ""}" data-id="${escapeHtml(id)}" aria-label="${escapeHtml(p.display_name)}" ${dis ? "disabled" : ""}>
         ${face(p.display_name, { className: "is-small", sizes: "64px" })}
         <span>${escapeHtml(p.display_name)}</span>
       </button>`;
@@ -624,10 +626,15 @@
   }
 
   function bindPicks(root, onLock) {
-    $allC(".game-pick", root).forEach((btn) => {
+    const buttons = $allC(".game-pick", root);
+    buttons.forEach((btn) => {
+      btn.setAttribute("aria-pressed", String(btn.classList.contains("is-on")));
       btn.addEventListener("click", () => {
         pickId = btn.getAttribute("data-id") || "";
-        $allC(".game-pick", root).forEach((b) => b.classList.toggle("is-on", b === btn));
+        buttons.forEach((b) => {
+          b.classList.toggle("is-on", b === btn);
+          b.setAttribute("aria-pressed", String(b === btn));
+        });
       });
     });
     const lock = $("#game-lock", root);
@@ -706,10 +713,13 @@
         const why = you.isHungover ? "Egg-nog Hangover" : "a haunt";
         return `<div class="card game-action"><h3>You cannot vote today</h3><p>${why} has you sitting this one out. Enjoy the show. Or don’t.</p></div>`;
       }
+      if (d.locked) return '<div class="card game-action"><h3>Day vote</h3><p>Your vote is locked in. Watch the TV for the result.</p></div>';
       return `<div class="card game-action"><h3>Day vote</h3>
-        <p>Pick someone still in the game. The player with the most votes becomes a ghost, even with an extra life. A tie keeps everyone in.</p>
-        ${d.locked ? "<p>Locked in. Wait for the host.</p>" : pickGrid(living, pickId, you.id) + '<button class="btn btn-gold" type="button" id="game-lock">Lock in your vote</button>'}
-        <p class="form-status" id="game-status" hidden></p></div>`;
+        <p>Vote for a player or choose Spare everyone. Everyone stays in if Spare everyone wins, the top vote ties, or no votes are counted.</p>
+        <button type="button" class="game-pick game-pick-spare${pickId === SPARE_VOTE ? " is-on" : ""}" data-id="${SPARE_VOTE}">Spare everyone</button>
+        ${pickGrid(living, pickId, you.id)}
+        <button class="btn btn-gold" type="button" id="game-lock">Lock in your vote</button>
+        <p class="form-status" id="game-status" role="status" hidden></p></div>`;
     }
     if (d.phase === "night") {
       if (d.locked) {
@@ -788,7 +798,9 @@
         <p>Waiting for the host to shuffle…</p>
       </div>${docsHtml({ backGame: false })}`;
     } else {
-      body = roleCardHtml(d) + docsHtml({ backGame: false }) + actionPanel(d);
+      const action = actionPanel(d);
+      const reference = roleCardHtml(d) + docsHtml({ backGame: false });
+      body = d.phase === "day" ? action + reference : reference + action;
     }
     root.innerHTML = body;
     if (waiting || hostWait) return;
@@ -799,10 +811,19 @@
         if (!id) { setStatus(root, "Pick someone.", false); return; }
         submit("gingerbread", id).then((res) => afterSubmit(root, res));
       });
-    } else if (d.phase === "day" && you.alive && !you.isHaunted && !d.locked) {
-      bindPicks(root, (id) => {
-        if (!id) { setStatus(root, "Pick someone.", false); return; }
-        submit("vote", id).then((res) => afterSubmit(root, res));
+    } else if (d.phase === "day" && you.alive && !you.isHaunted && !you.isHungover && !d.locked) {
+      bindPicks(root, async (id) => {
+        if (!id) { setStatus(root, "Pick a player or choose Spare everyone.", false); return; }
+        const lock = $("#game-lock", root);
+        lock.disabled = true;
+        try {
+          const result = id === SPARE_VOTE ? await submit("vote", null, null, SPARE_VOTE) : await submit("vote", id);
+          await afterSubmit(root, result);
+        } catch (_) {
+          setStatus(root, "Couldn’t lock in your vote. Try again.", false);
+        } finally {
+          lock.disabled = false;
+        }
       });
     } else if (d.phase === "night" && you.alive && !d.locked) {
       const box = $(".game-action", root);
@@ -886,10 +907,14 @@
       setStatus(root, (res && (res.message || res.reason)) || "Couldn’t lock that in.", false);
       return;
     }
+    clearPicks();
+    return refreshPlayer(root, true);
+  }
+
+  function clearPicks() {
     pickId = "";
     pickId2 = "";
     pickId3 = "";
-    refreshPlayer(root, true);
   }
 
   function refreshPlayer(root, force) {
@@ -908,7 +933,13 @@
         renderLobby(root);
         return;
       }
-      const sig = [d.phase, d.dealt, d.locked, d.nightNumber, d.dayNumber, d.winnerSide, d.reveal && d.reveal.beatIndex, d.reveal && d.reveal.sceneIndex, d.you && d.you.role, (d.submitted || []).join(",")].join("|");
+      const round = [d.phase, d.nightNumber, d.dayNumber].join("|");
+      if (round !== playerPickRound) {
+        clearPicks();
+        playerPickRound = round;
+      }
+      const sig = [round, d.dealt, d.locked, d.winnerSide, d.reveal?.beatIndex, d.reveal?.sceneIndex, d.you?.role,
+        d.you?.alive, d.you?.isHaunted, d.you?.isHungover, (d.submitted || []).join(",")].join("|");
       if (!force && sig === lastSig) return;
       lastSig = sig;
       renderPlayerInto(root, d);
@@ -918,9 +949,8 @@
   function renderPlayer(root, tok) {
     if (!root) return;
     lastSig = "";
-    pickId = "";
-    pickId2 = "";
-    pickId3 = "";
+    playerPickRound = "";
+    clearPicks();
     root.innerHTML = '<p class="lede" style="text-align:center">Opening the game…</p>';
     refreshPlayer(root, true);
     startPoll(() => refreshPlayer(root, false), POLL_PLAYER);
@@ -1062,16 +1092,22 @@
         <p class="form-status" id="game-status" role="status" hidden></p>
         <p class="game-muted">Advance one TV beat at a time.</p></div>`;
     } else if (d.phase === "twist") {
-      mid += `<div class="card"><h3>Optional twist</h3><p>One card a day, or skip.</p>
+      const beforeVote = d.reveal?.mode === "post_morning";
+      mid += `<div class="card"><h3>Optional twist</h3>
+        ${beforeVote ? "<p>Give everyone 3 minutes to discuss before opening the vote.</p>" : ""}
+        <p>One card a day, or skip.</p>
         <div class="game-twist-grid">${twists.map((t) =>
           `<button type="button" class="btn btn-ghost" data-twist="${escapeHtml(t.id)}">${escapeHtml(t.name)}</button>`
         ).join("")}
-        <button type="button" class="btn btn-gold" id="host-skip-twist">Skip twists today</button></div>
+        <button type="button" class="btn btn-gold" id="host-skip-twist">${beforeVote ? "Skip twist and open voting" : "Skip twists today"}</button></div>
         <div id="twist-targets"></div>
         <p class="form-status" id="game-status" hidden></p></div>`;
     } else if (d.phase === "night" || d.phase === "day" || d.phase === "gingerbread") {
+      const voting = d.phase === "day";
       mid += `<div class="card"><p>Locked in: <strong>${d.submittedCount || 0} / ${d.expectedCount || 0}</strong></p>
-        <button type="button" class="btn btn-gold btn-shuffle" id="host-advance">Advance</button></div>`;
+        ${voting ? "<p>Players can vote for someone or choose Spare everyone.</p>" : ""}
+        <button type="button" class="btn btn-gold btn-shuffle" id="host-advance">${voting ? "Reveal vote" : "Advance"}</button>
+        <p class="form-status" id="game-status" role="status" hidden></p></div>`;
     }
     if (roles.length) {
       mid += `<div class="card game-host-roles"><h3>Roles (host only)</h3>
@@ -1098,8 +1134,7 @@
     bindHostSetup(root, "#host-start", () => a.gameHostStart(ht), "Couldn’t start the story. Try again.");
     bindHostSetup(root, "#host-new-lobby", () => a.gameHostReset(ht), "Couldn’t open a new lobby. Try again.");
     bindHostSetup(root, "#host-advance", () => a.gameHostAdvance(ht), "Couldn’t advance the reveal. Try again.");
-    const skip = $("#host-skip-twist", root);
-    if (skip) skip.addEventListener("click", () => a.gameHostSkipTwist(ht).then(() => { lastSig = ""; refreshHost(root, true); }));
+    bindHostSetup(root, "#host-skip-twist", () => a.gameHostSkipTwist(ht), "Couldn’t skip the twist. Try again.");
     $allC("[data-twist]", root).forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-twist");
@@ -1191,6 +1226,7 @@
           <p class="kicker">Who Stole Christmas?</p>
           <h1 class="tv-title outline-red">${escapeHtml(phaseText)}</h1>
           ${waiting ? '<p class="tv-wait">Waiting for the host to shuffle…</p>' : ""}
+          ${d.phase === "day" ? '<p class="tv-wait">Voting is open on your phones.</p>' : ""}
           ${reveal}
           ${d.phase === "ended" && d.winnerText ? `<p class="tv-winner">${escapeHtml(d.winnerText)}</p>` : ""}
           ${rosterReady ? '<h2 class="tv-sub">Who’s in</h2>' + rosterHtml(d.players || [], { faces: true }) : ""}
