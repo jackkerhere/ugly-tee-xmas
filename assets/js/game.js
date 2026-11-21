@@ -108,66 +108,199 @@
       ${back}`;
   }
 
+  const GUIDE_GROUPS = [
+    ["Concertorants", "town", ["santa", "reindeer", "detective", "mrs_claus", "gingerbread", "fruitcake", "witness", "liar_elf", "citizen"]],
+    ["Grinches", "grinches", ["grinch", "tough_grinch"]],
+    ["Wanderers", "wanderers", ["krampus", "snowman"]],
+    ["Ghosts", "ghosts", ["ghost"]]
+  ];
+
+  const GUIDE_DETAILS = {
+    "grinch": {
+      "description": "Every December, Concerto lights its lanterns and starts singing. The Grinch hates both. So every Christmas, they come down from the hills to spoil the celebrations. This year, they brought help.",
+      "abilities": [
+        "Each night, choose one target together with the other Grinches."
+      ],
+      "winCondition": "The Grinches win when they match or outnumber all other living players combined."
+    },
+    "tough_grinch": {
+      "description": "The Tough Grinch helped carry the stolen presents out of Concerto in a single sack. When the sack split halfway up the hill, they carried the presents the rest of the way anyway.",
+      "abilities": [
+        "Choose one target together with the other Grinches each night.",
+        "Your extra life lets you survive your first night hit. The village is kept in the dark about how you survived."
+      ],
+      "winCondition": "The Grinches win when they match or outnumber all other living players combined."
+    },
+    "santa": {
+      "description": "Santa knows Concerto one rooftop at a time. With the presents gone and the streets dark, there’s still one more name to check before he can call it a night.",
+      "abilities": [
+        "Save one person each night, including yourself. Choose somebody different from the previous night."
+      ],
+      "winCondition": "The Concertorants win when every Grinch and Krampus is out."
+    },
+    "reindeer": {
+      "description": "The Reindeer usually guides the sleigh through the thickest snow. Tonight, their hoofprints stop outside someone’s door.",
+      "abilities": [
+        "Guard one other person each night. You can guard the same person again.",
+        "Your target survives an attack if you make it through the night."
+      ],
+      "winCondition": "The Concertorants win when every Grinch and Krampus is out."
+    },
+    "detective": {
+      "description": "The Elf Detective found an empty hook where the village’s oldest bell used to hang. Now there’s a notebook full of suspects and a magnifying glass fogged up from the cold.",
+      "abilities": [
+        "Check one person each night. You’ll get one yes or no answer for whether they’re a Grinch, the Tough Grinch, or Krampus."
+      ],
+      "winCondition": "The Concertorants win when every Grinch and Krampus is out."
+    },
+    "mrs_claus": {
+      "description": "Mrs Claus keeps the kettle on long after the Christmas market closes. At the back of her cupboard, next to the good cocoa, is a little tin marked FOR EMERGENCIES.",
+      "abilities": [
+        "Use Hot Cocoa once per game to save that night’s targets. Cocoa can save you on the first night only.",
+        "Use Coal once per game to poison one person.",
+        "You can use one item per night."
+      ],
+      "winCondition": "The Concertorants win when every Grinch and Krampus is out."
+    },
+    "gingerbread": {
+      "description": "The Gingerbread Man escaped the bakery before anyone could put on the second gumdrop button. They’re still touchy about being called a party snack.",
+      "abilities": [
+        "You have no special night action while alive.",
+        "When eliminated, choose one living player to hit on your way out."
+      ],
+      "winCondition": "The Concertorants win when every Grinch and Krampus is out."
+    },
+    "fruitcake": {
+      "description": "This Fruitcake has survived three Christmas markets, a week on the post office shelf, and a family that keeps wrapping it up again. A little trouble in Concerto hardly seems worth mentioning.",
+      "abilities": [
+        "You have no special night action.",
+        "Your extra life lets you survive your first night hit. The village is kept in the dark about how you survived."
+      ],
+      "winCondition": "The Concertorants win when every Grinch and Krampus is out."
+    },
+    "witness": {
+      "description": "Someone was still awake when a figure slipped out of the square with a sack. The Witness got a good look and spent the rest of the night deciding how much to say.",
+      "abilities": [
+        "On the first night, you learn the name of one Grinch. You may drop hints, but you must keep their name to yourself."
+      ],
+      "winCondition": "The Concertorants win when every Grinch and Krampus is out."
+    },
+    "liar_elf": {
+      "description": "The Liar Elf swears they spent Christmas Eve knitting scarves for the elderly. Their scarf has no stitches, and Concerto’s oldest resident says she’d remember.",
+      "abilities": [
+        "You have no special night action.",
+        "You can only lie. If you tell the truth, you’re out."
+      ],
+      "winCondition": "The Concertorants win when every Grinch and Krampus is out."
+    },
+    "citizen": {
+      "description": "The Citizen helped hang the lanterns, knows who burns the mince pies, and has lived in Concerto long enough to notice when someone seems a little too cheerful after Christmas goes missing.",
+      "abilities": [
+        "Vote with the village during the day. Check in each night just like everyone else.",
+        "You have no special power."
+      ],
+      "winCondition": "The Concertorants win when every Grinch and Krampus is out."
+    },
+    "krampus": {
+      "description": "When Concerto’s last lantern goes out, Krampus is just getting started. By morning, they’ll look like any other neighbour at the market and probably ask if you slept well.",
+      "abilities": [
+        "Choose one target on your own each night."
+      ],
+      "winCondition": "Be the last player standing."
+    },
+    "snowman": {
+      "description": "The Snowman has stood in the square through every carol, every snowstorm, and every argument about where to put the tree. This year, they’re hoping the village will finally give them a reason to leave.",
+      "abilities": [
+        "You have no special night action."
+      ],
+      "winCondition": "Get voted out by the village. Everyone else keeps playing."
+    },
+    "ghost": {
+      "description": "There’s a cold spot at the market where the cocoa never stays hot. The Ghosts meet there after dark to compare notes and decide whose turn it is to rattle a window.",
+      "abilities": [
+        "Together, share one clue each morning about what caused one player’s death. Keep the killer’s name secret.",
+        "Together, haunt one living player to stop their next vote.",
+        "Once per game, the Ghosts can take over one living player’s vote."
+      ],
+      "winCondition": "Each Ghost can predict the winning side. If more than half of the predictions are correct, every Ghost earns a gachapon spin."
+    }
+  };
+
+  const GUIDE_TWISTS = [
+    ["🌨️", "Blizzard", "No kills or saves tonight. Players still lock in a night tap, so nobody can tell."],
+    ["📜", "Naughty List Leak", "The host reveals one living innocent (not a Grinch or Krampus). Not their exact role."],
+    ["🗳️", "Secret Recount", "Wipe today’s votes and vote again."],
+    ["🎁", "Gift Swap", "Two living players swap votes today."],
+    ["🥛", "Egg-nog Hangover", "One random living player cannot vote today."],
+    ["👕", "Ugly Tee Audit", "The host picks a living player. Their vote counts twice today."]
+  ];
+
   function guideInnerHtml() {
-    const roles = [
-      ["Bad", [
-        ["grinch", "Grinch", "Each night the Grinches steal one person, together. They win when living Grinches are at least as many as everyone else still standing (Krampus counts as not a Grinch)."],
-        ["tough_grinch", "Tough Grinch", "A Grinch with two lives. The Elf Detective sees them as bad. The first unexplained hit only knocks a life off — they stay in the game, and nobody is told why."],
-        ["krampus", "Krampus", "Plays alone, steals one person each night, one life. Wins only if last standing. Not a Grinch: if the Grinches hit their numbers, they win even if Krampus is still around. The Detective sees them as bad."]
-      ]],
-      ["Nice", [
-        ["santa", "Santa", "Saves one person each night, including themselves. Cannot save the same person two nights in a row."],
-        ["reindeer", "Reindeer", "Guards one person each night (not themselves). May guard the same person every night. If that person is stolen they survive — but only if the Reindeer also makes it through the night. The Reindeer is not taken down in their place."],
-        ["detective", "Elf Detective", "Checks one person each night, then learns whether they are bad (a Grinch, Tough Grinch, or Krampus) or not."],
-        ["mrs_claus", "Mrs Claus", "Once per game: Hot Cocoa, which saves tonight’s victim or victims. Once per game: Coal, which poisons anyone. Only one item per night. Cocoa can save her only on night 1."],
-        ["gingerbread", "Gingerbread Man", "No night power while in the game. When out, they pick one player to take down with them."],
-        ["fruitcake", "Fruitcake", "Two lives, no night power. The first unexplained hit costs a life and they stay in. Nobody is told why they survived."],
-        ["witness", "Witness", "On night 1 they are shown one Grinch. They may only hint — they must not say the name outright."],
-        ["liar_elf", "Liar Elf", "No night power. They may only lie. If they tell the truth, they’re out."],
-        ["citizen", "Citizen", "Votes during the day and checks in at night. Has no special powers."]
-      ]],
-      ["Alone", [
-        ["snowman", "Snowman", "Wins if the group votes them out. The game then continues for everyone else. Being stolen at night does not count."]
-      ]],
-      ["After you’re out", [
-        ["ghost", "Ghosts", "Each night, as a group: one clue about a dead player’s killer (a Grinch, Krampus, or a Christmas twist — Mrs Claus, the Gingerbread Man, or a vote). Haunt one living player, who loses their vote the next day. Once a game, possess a living player’s vote and choose it for them. Each ghost may also predict the winning side; if the majority is right, every ghost spins the gachapon."]
-      ]],
-      ["Host optional chaos", [
-        ["🌨️", "Blizzard", "No kills or saves tonight. Players still lock in a night tap, so nobody can tell."],
-        ["📜", "Naughty List Leak", "The host reveals one living innocent (not a Grinch or Krampus). Not their exact role."],
-        ["🗳️", "Secret Recount", "Wipe today’s votes and vote again."],
-        ["🎁", "Gift Swap", "Two living players swap votes today."],
-        ["🥛", "Egg-nog Hangover", "One random living player cannot vote today."],
-        ["👕", "Ugly Tee Audit", "The host picks a living player. Their vote counts twice today."]
-      ]]
-    ];
     return `
       <header class="guide-hero">
         <p class="kicker">Who Stole Christmas?</p>
         <h1 class="outline-red">Character Guide</h1>
-        <p class="lede">The whole cast, with no spoilers about who is what tonight. Roles are only dealt when the host hits Shuffle.</p>
+        <p class="lede">Choose a character to open their card. Roles are dealt when the host shuffles.</p>
       </header>
-      ${roles.map(([side, list]) => `
+      ${GUIDE_GROUPS.map(([side, family, roles]) => `
         <section class="guide-side">
-          <h2>${escapeHtml(side)}</h2>
-          <ul class="guide-list">
-            ${list.map(([symbol, name, blurb]) => {
-              const character = ROLE_META[symbol];
-              const artwork = character
-                ? rolePortrait(character, "guide-portrait", "lazy")
-                : `<span class="guide-icon" aria-hidden="true">${symbol}</span>`;
-              return `
-                <li${character ? ' class="guide-character"' : ""}>
-                  ${artwork}
-                  <div>
-                    <h3>${escapeHtml(name)}</h3>
-                    <p>${escapeHtml(blurb)}</p>
-                  </div>
-                </li>`;
+          <h2>${side}</h2>
+          <ul class="guide-list guide-character-grid">
+            ${roles.map(role => {
+              const character = ROLE_META[role];
+              return `<li class="guide-character">
+                <h3><button class="guide-character-button" type="button" data-guide-role="${role}" data-card-family="${family}" aria-haspopup="dialog">
+                  ${rolePortrait(character, "guide-portrait", "lazy")}
+                  <span>${escapeHtml(character.name)}</span>
+                  <span class="guide-character-arrow" aria-hidden="true">›</span>
+                </button></h3>
+              </li>`;
             }).join("")}
           </ul>
         </section>`).join("")}
+      <section class="guide-side">
+        <h2>Host optional chaos</h2>
+        <ul class="guide-list">
+          ${GUIDE_TWISTS.map(([symbol, name, blurb]) => `<li>
+            <span class="guide-icon" aria-hidden="true">${symbol}</span>
+            <div><h3>${escapeHtml(name)}</h3><p>${escapeHtml(blurb)}</p></div>
+          </li>`).join("")}
+        </ul>
+      </section>
       ${docsHtml({ backGame: true })}
+    `;
+  }
+
+  function characterCardHtml(role) {
+    const character = ROLE_META[role];
+    const details = GUIDE_DETAILS[role];
+    const [side, family] = GUIDE_GROUPS.find(([, , roles]) => roles.includes(role));
+    return `
+      <article class="character-card" data-card-family="${family}">
+        <div class="character-card-controls">
+          <button class="character-card-like" type="button" aria-pressed="false" disabled>
+            <span class="character-card-heart" aria-hidden="true">♡</span>
+            <span class="character-card-count">–</span>
+          </button>
+          <button class="character-card-close" type="button" aria-label="Close character card" autofocus>×</button>
+        </div>
+        <p class="character-card-like-status" role="status"></p>
+        <a class="character-card-sign-in" href="game.html" hidden>Sign in to like this card</a>
+        <header class="character-card-heading">
+          <p class="character-card-faction">${side}</p>
+          <h2 id="character-card-title">${escapeHtml(character.name)}</h2>
+        </header>
+        ${rolePortrait(character, "character-card-portrait")}
+        <p class="character-card-bio">${escapeHtml(details.description)}</p>
+        <section class="character-card-section">
+          <h3>Abilities</h3>
+          <ul>${details.abilities.map(ability => `<li>${escapeHtml(ability)}</li>`).join("")}</ul>
+        </section>
+        <section class="character-card-section">
+          <h3>Win condition</h3>
+          <p>${escapeHtml(details.winCondition)}</p>
+        </section>
+      </article>
     `;
   }
 
@@ -211,7 +344,150 @@
 
   function renderGuide(root) {
     if (!root) return;
-    root.innerHTML = '<div class="guide-page">' + guideInnerHtml() + "</div>";
+    root.innerHTML = `
+      <div class="guide-page">${guideInnerHtml()}</div>
+      <dialog class="guide-character-dialog" id="guide-character-dialog" aria-modal="true" aria-labelledby="character-card-title"></dialog>
+    `;
+    const page = $(".guide-page", root);
+    const dialog = $("#guide-character-dialog", root);
+    const data = api();
+    const guestToken = token();
+    let activeRole = null;
+    let opener = null;
+    let fallback = false;
+    let likes = new Map();
+    let canLike = false;
+    let loaded = false;
+    let reading = false;
+    let saving = false;
+    let revision = 0;
+    let likeError = "";
+
+    function renderLikes() {
+      if (!activeRole || !dialog.hasAttribute("open")) return;
+      const button = $(".character-card-like", dialog);
+      const { count = 0, liked = false } = likes.get(activeRole) || {};
+      $(".character-card-heart", dialog).textContent = liked ? "♥" : "♡";
+      $(".character-card-count", dialog).textContent = loaded ? count.toLocaleString() : "–";
+      const action = canLike ? (liked ? "Unlike" : "Like") + " " + ROLE_META[activeRole].name + ", " : "";
+      button.setAttribute("aria-label", loaded ? action + count + (count === 1 ? " like" : " likes") : "Likes");
+      button.setAttribute("aria-pressed", String(liked));
+      button.disabled = !loaded || !canLike;
+      button.setAttribute("aria-busy", String(saving));
+      $(".character-card-like-status", dialog).textContent = likeError;
+      $(".character-card-sign-in", dialog).hidden = !loaded || canLike;
+    }
+
+    function setLikes(result) {
+      if (!result?.ok || !Array.isArray(result.likes)) throw new Error("Likes unavailable");
+      likes = new Map(result.likes.map(({role, count, liked}) => [role, { count: Number(count) || 0, liked: liked === true }]));
+      canLike = result.canLike === true;
+      loaded = true;
+      likeError = "";
+    }
+
+    async function refreshLikes() {
+      if (reading || saving) return;
+      const startedAt = revision;
+      reading = true;
+      try {
+        const result = await data.characterLikes(guestToken);
+        if (root.isConnected && startedAt === revision) setLikes(result);
+      } catch {
+        if (!loaded && startedAt === revision) likeError = "Couldn’t load likes. Reopen the card to try again.";
+      } finally {
+        reading = false;
+        if (root.isConnected) renderLikes();
+      }
+    }
+
+    function releaseCard() {
+      if (dialog.hasAttribute("open")) return;
+      activeRole = null;
+      if (fallback) page.inert = false;
+      fallback = false;
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+      opener = null;
+    }
+
+    function closeCard() {
+      if (!dialog.hasAttribute("open")) return;
+      if (fallback) {
+        dialog.removeAttribute("open");
+        dialog.classList.remove("character-dialog-fallback");
+        releaseCard();
+      } else {
+        dialog.close();
+      }
+    }
+
+    page.addEventListener("click", event => {
+      const button = event.target.closest("[data-guide-role]");
+      if (!button || dialog.hasAttribute("open")) return;
+      activeRole = button.dataset.guideRole;
+      opener = button;
+      dialog.innerHTML = characterCardHtml(activeRole);
+      if (typeof dialog.showModal === "function") {
+        dialog.showModal();
+      } else {
+        fallback = true;
+        page.inert = true;
+        dialog.classList.add("character-dialog-fallback");
+        dialog.setAttribute("open", "");
+      }
+      $(".character-card-close", dialog).focus({ preventScroll: true });
+      renderLikes();
+      refreshLikes();
+    });
+
+    dialog.addEventListener("close", releaseCard);
+    dialog.addEventListener("keydown", event => {
+      if (!fallback) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeCard();
+      } else if (event.key === "Tab") {
+        const controls = dialog.querySelectorAll("button:not(:disabled), a:not([hidden])");
+        const first = controls[0], last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    });
+    dialog.addEventListener("click", async event => {
+      if (event.target.closest(".character-card-close, .character-card-sign-in")) {
+        closeCard();
+        return;
+      }
+      if (event.target === dialog) {
+        const bounds = dialog.getBoundingClientRect();
+        if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) {
+          closeCard();
+        }
+        return;
+      }
+      if (!event.target.closest(".character-card-like") || !activeRole || !canLike || saving) return;
+      const role = activeRole;
+      const liked = !(likes.get(role)?.liked);
+      saving = true;
+      revision += 1;
+      likeError = "";
+      renderLikes();
+      try {
+        const result = await data.setCharacterLike(guestToken, role, liked);
+        if (root.isConnected) setLikes(result);
+      } catch {
+        if (activeRole === role) likeError = "Couldn’t save your like. Try again.";
+      } finally {
+        saving = false;
+        if (root.isConnected) renderLikes();
+      }
+    });
+    refreshLikes();
   }
   function renderHowto(root) {
     if (!root) return;

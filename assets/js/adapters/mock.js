@@ -9,6 +9,11 @@
   const MSG_KEY = "uglytee-demo-messages-v1";
   const WISH_KEY = "uglytee-demo-wishlist-v1";
   const READ_KEY = "uglytee-demo-chat-read-v1";
+  const LIKES_KEY = "uglytee-demo-character-likes-v1";
+  const CHARACTER_ROLES = [
+    "grinch", "tough_grinch", "krampus", "santa", "reindeer", "detective",
+    "mrs_claus", "gingerbread", "fruitcake", "witness", "liar_elf", "citizen", "snowman", "ghost"
+  ];
 
   // Obviously fake preview records — not a real draw.
   const DEMO_GUESTS = {
@@ -415,6 +420,32 @@
       all[key] = row;
       writeChatReads(all);
       return Promise.resolve({ ok: true, thread });
+    },
+    characterLikes(token) {
+      const guest = String(token || "").trim();
+      const canLike = Object.hasOwn(DEMO_GUESTS, guest);
+      const votes = readJson(LIKES_KEY, {}) || {};
+      const likes = CHARACTER_ROLES.map((role) => {
+        const people = Object.keys(DEMO_GUESTS).filter((id) => votes[id]?.includes(role));
+        return { role, count: people.length, liked: canLike && people.includes(guest) };
+      });
+      return Promise.resolve({ ok: true, canLike, likes });
+    },
+    setCharacterLike(token, role, liked) {
+      const guest = String(token || "").trim();
+      if (!Object.hasOwn(DEMO_GUESTS, guest)) {
+        return Promise.resolve({ ok: false, reason: "forbidden", message: "Sign in to like characters." });
+      }
+      if (!CHARACTER_ROLES.includes(role) || typeof liked !== "boolean") {
+        return Promise.resolve({ ok: false, reason: "invalid", message: "Choose a character." });
+      }
+      const votes = readJson(LIKES_KEY, {}) || {};
+      const next = new Set(votes[guest] || []);
+      if (liked) next.add(role);
+      else next.delete(role);
+      votes[guest] = [...next];
+      writeJson(LIKES_KEY, votes);
+      return this.characterLikes(guest);
     },
     gamePublic() {
       return Promise.resolve({ ok: true, phase: "not_started", dealt: false, players: [], title: "Who Stole Christmas?", reveal: { active: false } });

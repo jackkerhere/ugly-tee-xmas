@@ -124,6 +124,16 @@
       });
     },
     gamePublic() { return rpc("game_public", {}); },
+    characterLikes(token) {
+      return rpc("game_character_likes", { p_token: String(token || "").trim() || null });
+    },
+    setCharacterLike(token, role, liked) {
+      return rpc("game_set_character_like", {
+        p_token: String(token || "").trim(),
+        p_role: role,
+        p_liked: liked
+      });
+    },
     gameMe(token) { return rpc("game_me", { token: String(token || "").trim() }); },
     gameLobby(token) { return rpc("game_lobby", { token: String(token || "").trim() }); },
     gameLobbySet(token, joining) {

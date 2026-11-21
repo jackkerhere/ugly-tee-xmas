@@ -48,6 +48,8 @@
     unreadCounts: (token) => current().unreadCounts(token),
     markRead: (token, thread) => current().markRead(token, thread),
     gamePublic: () => current().gamePublic(),
+    characterLikes: (token) => current().characterLikes(token),
+    setCharacterLike: (token, role, liked) => current().setCharacterLike(token, role, liked),
     gameMe: (token) => current().gameMe(token),
     gameLobby: (token) => current().gameLobby(token),
     gameLobbySet: (token, joining) => current().gameLobbySet(token, joining),
