@@ -29,23 +29,19 @@
     try {
       if (k) sessionStorage.setItem(STORE_TOKEN, k);
       else sessionStorage.removeItem(STORE_TOKEN);
-    } catch (_) { /* ignore */ }
+      return true;
+    } catch (_) { return false; }
   }
 
   function logoutGuest(e) {
     if (e) e.preventDefault();
+    const page = guestPage();
     persistToken("");
-    const url = new URL("me.html", location.href);
-    url.searchParams.delete("k");
+    const url = new URL(page, location.href);
     if (isDemoMode()) url.searchParams.set("demo", "1");
-    const next = url.pathname.split("/").pop() + (url.search || "");
-    if (location.pathname.endsWith("me.html") || /me\.html$/i.test(location.pathname)) {
-      history.replaceState({ spa: true }, "", next || "me.html");
-      renderGuestPage();
-      carryTokenInLinks();
-      return;
-    }
-    location.href = next || "me.html";
+    history.replaceState({ spa: true }, "", url.pathname + url.search);
+    carryTokenInLinks(document, true);
+    afterPageChange();
   }
 
   function isDemoMode() {
@@ -53,10 +49,10 @@
     catch { return false; }
   }
 
-  function withToken(href) {
+  function withToken(href, clearToken = false) {
     const k = currentToken();
     const demo = isDemoMode();
-    if (!k && !demo) return href;
+    if (!k && !demo && !clearToken) return href;
     let path = href;
     let hash = "";
     let query = "";
@@ -71,7 +67,8 @@
       path = path.slice(0, qAt);
     }
     const params = new URLSearchParams(query);
-    if (k) params.set("k", k);
+    if (clearToken || pageKey(href) === "game") params.delete("k");
+    else if (k) params.set("k", k);
     if (demo) params.set("demo", "1");
     const qs = params.toString();
     return path + (qs ? "?" + qs : "") + hash;
@@ -86,12 +83,12 @@
     return path === "" || path.endsWith(".html") || path === "./" || path === "/";
   }
 
-  function carryTokenInLinks(root) {
-    if (!currentToken()) return;
+  function carryTokenInLinks(root, clearToken = false) {
+    if (!currentToken() && !isDemoMode() && !clearToken) return;
     $all("a[href]", root).forEach((a) => {
       const href = a.getAttribute("href");
       if (!isSitePage(href)) return;
-      a.setAttribute("href", withToken(href));
+      a.setAttribute("href", withToken(href, clearToken));
     });
   }
 
@@ -540,16 +537,17 @@
   function startGuestSession(token) {
     const k = String(token || "").trim();
     if (!k) return;
-    persistToken(k);
+    const stored = persistToken(k);
     const url = new URL(location.href);
-    url.searchParams.set("k", k);
+    if (guestPage() === "game.html" && stored) url.searchParams.delete("k");
+    else url.searchParams.set("k", k);
     const next = url.pathname.split("/").pop() + (url.search ? "?" + url.searchParams.toString() : "") + url.hash;
     history.replaceState({ spa: true }, "", next);
     afterPageChange();
   }
 
   function backToNameLink() {
-    return '<p class="logout-line"><a href="me.html" id="pick-another-name">Choose a different name</a></p>';
+    return `<p class="logout-line"><a href="${withToken(guestPage())}" id="pick-another-name">Choose a different name</a></p>`;
   }
 
   const FACE_SLUGS = {
@@ -583,6 +581,7 @@
   }
 
   function whoGridHtml(guests) {
+    const playing = guestPage() === "game.html";
     const tiles = (guests || []).map((g) => {
       const claimed = !!g.claimed;
       const isTest = !!g.is_test;
@@ -598,7 +597,7 @@
       <div class="who-gate">
         <div class="section-head" style="margin-bottom:1.1rem">
           <div class="cloud-title"><h1>Who are you?</h1></div>
-          <p class="lede">Tap your name to claim your page, or log in if you’ve already created a PIN.</p>
+          <p class="lede">${playing ? "Tap your name to sign in for the game. If it’s your first time, create a PIN." : "Tap your name to claim your page, or log in if you’ve already created a PIN."}</p>
         </div>
         <div class="who-grid" role="list">${tiles}</div>
         <p class="pin-error" id="who-error" hidden></p>
@@ -622,16 +621,17 @@
 
   function createPinHtml(guest, step) {
     const confirm = step === "confirm";
+    const playing = guestPage() === "game.html";
     return `
       <div class="pin-gate">
         <div class="card">
           <h1 class="outline-red" style="-webkit-text-stroke:4px #fff">${confirm ? "Confirm your PIN" : "Create your 6-digit PIN"}</h1>
-          <p class="pin-lead">${confirm ? "Type the same PIN once more." : "This is for " + escapeHtml(guest.name) + ". You’ll use it to open your page later."}</p>
+          <p class="pin-lead">${confirm ? "Type the same PIN once more." : "This is for " + escapeHtml(guest.name) + (playing ? ". You’ll use it for Game and My page." : ". You’ll use it to open your page later.")}</p>
           <p class="pin-warn">Only you know this. Don’t share it.</p>
           <form id="pin-form" action="#" novalidate>
             <div class="pin-boxes" role="group" aria-label="${confirm ? "Confirm six-digit PIN" : "New six-digit PIN"}">${pinBoxesHtml()}</div>
             <p class="pin-error" id="pin-error" hidden></p>
-            <p style="margin-top:1rem"><button class="btn btn-gold" type="submit">${confirm ? "Save PIN and open my page" : "Continue"}</button></p>
+            <p style="margin-top:1rem"><button class="btn btn-gold" type="submit">${confirm ? (playing ? "Save PIN and open the lobby" : "Save PIN and open my page") : "Continue"}</button></p>
           </form>
           ${backToNameLink()}
         </div>
@@ -639,16 +639,17 @@
   }
 
   function loginPinHtml(guest) {
+    const playing = guestPage() === "game.html";
     return `
       <div class="pin-gate">
         <div class="card">
           ${guestFaceHtml(guest.name, { className: "is-large", sizes: "176px" })}
           <h1 class="outline-red" style="-webkit-text-stroke:4px #fff">Welcome back, ${escapeHtml(guest.name)}</h1>
-          <p class="pin-lead">Enter your 6-digit PIN to open your page.</p>
+          <p class="pin-lead">Enter your 6-digit PIN to ${playing ? "open the lobby" : "open your page"}.</p>
           <form id="pin-form" action="#" novalidate>
             <div class="pin-boxes" role="group" aria-label="Six-digit PIN">${pinBoxesHtml()}</div>
             <p class="pin-error" id="pin-error" hidden></p>
-            <p style="margin-top:1rem"><button class="btn btn-gold" type="submit">Open my page</button></p>
+            <p style="margin-top:1rem"><button class="btn btn-gold" type="submit">${playing ? "Open the lobby" : "Open my page"}</button></p>
           </form>
           ${backToNameLink()}
         </div>
@@ -859,18 +860,19 @@
   }
 
   function renderClaimGate(root) {
+    if (!root || !globalInvite()) return;
     root.innerHTML = '<p class="lede" style="text-align:center">Finding everyone…</p>';
+    const error = () => {
+      root.innerHTML = gateHtml("We can’t open the name list just now.", "Please refresh and try again.") +
+        `<p class="logout-line"><a href="${withToken(guestPage())}">Try again</a></p>`;
+    };
     window.InviteData.listGuestsPublic().then((res) => {
       if (!res || !res.ok) {
-        root.innerHTML = gateHtml("We can’t open the name list just now.", "Please refresh and try again.") +
-          '<p class="logout-line"><a href="me.html">Try again</a></p>';
+        error();
         return;
       }
       showWhoGrid(root, res.guests || []);
-    }).catch(() => {
-      root.innerHTML = gateHtml("We can’t open the name list just now.", "Please refresh and try again.") +
-        '<p class="logout-line"><a href="me.html">Try again</a></p>';
-    });
+    }).catch(error);
   }
 
   const CHAT_PROMPTS = ["What size tee?", "Any allergies?", "Wish list?"];
@@ -1136,7 +1138,7 @@
   }
 
 
-  const ME_TAB_IDS = { "ugly-tee": true, santa: true, bring: true, game: true };
+  const ME_TAB_IDS = { "ugly-tee": true, santa: true, bring: true };
   const UNREAD_POLL_MS = 20000;
   let unreadPollTimer = null;
   let unreadFocusBound = false;
@@ -1325,7 +1327,6 @@
             <button type="button" class="me-tab" role="tab" id="me-tab-ugly-tee" data-me-tab="ugly-tee" aria-controls="me-panel-ugly-tee" aria-selected="true">Ugly Tee</button>
             <button type="button" class="me-tab" role="tab" id="me-tab-santa" data-me-tab="santa" aria-controls="me-panel-santa" aria-selected="false">Secret Santa<span class="me-tab-badge" id="santa-unread" hidden></span></button>
             <button type="button" class="me-tab" role="tab" id="me-tab-bring" data-me-tab="bring" aria-controls="me-panel-bring" aria-selected="false">Potluck</button>
-            <button type="button" class="me-tab" role="tab" id="me-tab-game" data-me-tab="game" aria-controls="me-panel-game" aria-selected="false">Game</button>
           </div>
         </div>
         ${res.demo || (g.token && String(g.token).indexOf("demo") === 0) ? '<p class="banner-demo">Preview data only — not a real draw.</p>' : ""}
@@ -1369,9 +1370,6 @@
           <p class="form-status" id="form-status" hidden></p>
         </form>
         </section>
-        <section class="me-panel" id="me-panel-game" role="tabpanel" aria-labelledby="me-tab-game" hidden>
-          <div id="game-root"></div>
-        </section>
         <p class="logout-line"><a href="me.html" id="logout-link">Not you? Log out</a></p>
       `;
       const logout = $("#logout-link", root);
@@ -1383,10 +1381,6 @@
       bindWishlist(root, token);
       bindChat(root, token, g);
       bindMeSubtabs(root, token, g);
-      if (window.UglyTeeGame) {
-        const gameRoot = $("#game-root", root);
-        if (gameRoot) window.UglyTeeGame.renderPlayer(gameRoot, token);
-      }
       const form = $("#bringing-form");
       const status = $("#form-status");
       form.addEventListener("submit", (e) => {
@@ -1440,13 +1434,43 @@
     const path = new URL(url, location.href).pathname;
     if (/itinerary\.html$/i.test(path)) return "itinerary";
     if (/menu\.html$/i.test(path)) return "menu";
-    if (/me\.html$/i.test(path)) return "me";
+    if (/\/me\.html$/i.test(path)) return "me";
     if (/host\.html$/i.test(path)) return "host";
     if (/tv\.html$/i.test(path)) return "tv";
     if (/guide\.html$/i.test(path)) return "guide";
     if (/how-to-play\.html$/i.test(path)) return "howto";
     if (/game\.html$/i.test(path)) return "game";
     return "home";
+  }
+
+  function guestPage() {
+    return pageKey(location.href) === "game" ? "game.html" : "me.html";
+  }
+
+  function legacyGameUrl(url) {
+    if (pageKey(url.href) !== "me" || url.hash.toLowerCase() !== "#game") return null;
+    const target = new URL("game.html", url);
+    target.search = url.search;
+    return target;
+  }
+
+  function redirectLegacyGame() {
+    const legacy = legacyGameUrl(new URL(location.href));
+    if (!legacy) return false;
+    const k = currentToken();
+    if (k && persistToken(k)) legacy.searchParams.delete("k");
+    location.replace(legacy.href);
+    return true;
+  }
+
+  function cleanGameUrl() {
+    if (guestPage() !== "game.html") return;
+    const url = new URL(location.href);
+    if (!url.searchParams.has("k")) return;
+    const k = (url.searchParams.get("k") || "").trim();
+    if (k && !persistToken(k)) return;
+    url.searchParams.delete("k");
+    history.replaceState(history.state, "", url.pathname + url.search + url.hash);
   }
 
   function updateNavCurrent() {
@@ -1470,12 +1494,12 @@
     renderGuestPage();
     if (window.UglyTeeGame) {
       const key = pageKey(location.href);
+      window.UglyTeeGame.stop();
       if (key === "host") window.UglyTeeGame.renderHost($("#host-root"));
       else if (key === "tv") window.UglyTeeGame.renderTv($("#tv-root"));
       else if (key === "guide") window.UglyTeeGame.renderGuide($("#guide-root"));
       else if (key === "howto") window.UglyTeeGame.renderHowto($("#howto-root"));
       else if (key === "game") window.UglyTeeGame.renderHub($("#game-hub-root"));
-      else if (key !== "me") window.UglyTeeGame.stop();
     }
     bindPlayerControls();
     startUnreadPoll();
@@ -1490,9 +1514,13 @@
   }
 
   async function swapTo(href, push) {
-    const url = new URL(href, location.href);
-    const k = currentToken();
-    if (k && !url.searchParams.get("k")) url.searchParams.set("k", k);
+    const source = new URL(href, location.href);
+    const legacy = legacyGameUrl(source);
+    const url = legacy || source;
+    const playing = pageKey(url.href) === "game";
+    const k = (url.searchParams.get("k") || "").trim() || currentToken();
+    if (playing && (!k || persistToken(k))) url.searchParams.delete("k");
+    else if (k && !url.searchParams.get("k")) url.searchParams.set("k", k);
     if (isDemoMode()) url.searchParams.set("demo", "1");
     const res = await fetch(url.pathname + url.search, { credentials: "same-origin" });
     if (!res.ok) {
@@ -1514,9 +1542,8 @@
     const keepOpen = storeOn(STORE_OPENED) || document.body.classList.contains("is-open");
     document.body.className = doc.body.className;
     if (keepOpen) document.body.classList.add("is-open");
-    if (push) {
-      history.pushState({ spa: true }, "", url.pathname + url.search + url.hash);
-    }
+    if (push) history.pushState({ spa: true }, "", url.pathname + url.search + url.hash);
+    else if (playing && url.href !== location.href) history.replaceState(history.state, "", url.pathname + url.search + url.hash);
     window.scrollTo(0, 0);
     afterPageChange();
   }
@@ -1540,6 +1567,7 @@
       swapTo(location.href, false).catch(() => { location.reload(); });
     });
     window.addEventListener("hashchange", () => {
+      if (redirectLegacyGame()) return;
       const root = $("#me-root");
       if (!root || !$(".me-subnav", root)) return;
       const tab = normalizeMeTab(location.hash);
@@ -1548,6 +1576,8 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    if (redirectLegacyGame()) return;
+    cleanGameUrl();
     const params = new URLSearchParams(location.search);
     if (params.get("shot") === "1") {
       document.documentElement.classList.add("is-shot");
@@ -1580,6 +1610,8 @@
     escapeAttr,
     currentToken,
     isDemoMode,
+    renderClaimGate,
+    logoutGuest,
     $: $,
     $all: $all
   };
