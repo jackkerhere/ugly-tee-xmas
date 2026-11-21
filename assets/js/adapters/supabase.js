@@ -125,6 +125,10 @@
     },
     gamePublic() { return rpc("game_public", {}); },
     gameMe(token) { return rpc("game_me", { token: String(token || "").trim() }); },
+    gameLobby(token) { return rpc("game_lobby", { token: String(token || "").trim() }); },
+    gameLobbySet(token, joining) {
+      return rpc("game_lobby_set", { token: String(token || "").trim(), joining: joining === true });
+    },
     gameSubmit(token, action, target, extra, extraText) {
       return rpc("game_submit", {
         token: String(token || "").trim(),
@@ -144,6 +148,9 @@
     gameHostState(hostToken) { return rpc("game_host_state", { host_token: String(hostToken || "").trim() }); },
     gameHostDeal(hostToken, playerIds) {
       return rpc("game_host_deal", { host_token: String(hostToken || "").trim(), player_ids: playerIds || [] });
+    },
+    gameHostDealLobby(hostToken) {
+      return rpc("game_host_deal_lobby", { host_token: String(hostToken || "").trim() });
     },
     gameHostStart(hostToken) { return rpc("game_host_start", { host_token: String(hostToken || "").trim() }); },
     gameHostAdvance(hostToken) { return rpc("game_host_advance", { host_token: String(hostToken || "").trim() }); },

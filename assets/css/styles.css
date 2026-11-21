@@ -1378,10 +1378,6 @@ html.is-shot *, html.is-shot *::before, html.is-shot *::after {
 .resume-bar.is-on { display: flex; }
 
 /* ---- Who Stole Christmas? ---- */
-.me-segments { grid-template-columns: 1fr 1fr; }
-@media (min-width: 720px) {
-  .me-segments { grid-template-columns: repeat(4, 1fr); }
-}
 .game-docs {
   display: flex;
   flex-wrap: wrap;
@@ -1408,7 +1404,43 @@ html.is-shot *, html.is-shot *::before, html.is-shot *::after {
   max-width: 32rem;
   margin: 0 auto 1.15rem;
 }
-.game-wait-emoji, .game-role-icon { font-size: 3rem; margin: 0 0 0.35rem; line-height: 1; }
+.game-wait-emoji { font-size: 3rem; margin: 0 0 0.35rem; line-height: 1; }
+.game-role-portrait, .game-ghost-portrait {
+  aspect-ratio: 1;
+  object-fit: contain;
+  margin: 0 auto 0.7rem;
+  background: #fff;
+  border-radius: 1rem;
+}
+.game-role-portrait { width: clamp(8rem, 38vw, 11rem); }
+.game-ghost-portrait { width: 6.25rem; }
+.game-lobby h2, .game-lobby h3 { margin: 0 0 0.6rem; }
+.game-lobby p { margin-bottom: 0.6rem; }
+.game-lobby .btn { margin: 0.4rem 0; }
+.game-lobby-members {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0;
+}
+.game-lobby-members li {
+  padding: 0.3rem 0.65rem;
+  background: #fff;
+  color: var(--navy);
+  border-radius: 1rem;
+}
+.game-sign-out {
+  color: var(--cream);
+  background: none;
+  border: 0;
+  padding: 0.5rem;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+}
 .game-role-card h2, .game-wait h3 { margin: 0.15rem 0 0.4rem; }
 .game-fellows { margin-top: 0.7rem; }
 .game-phase-tag {
@@ -1492,6 +1524,18 @@ html.is-shot *, html.is-shot *::before, html.is-shot *::after {
   border-radius: 14px;
   padding: 0.7rem 0.85rem;
   margin: 0 0 0.45rem;
+}
+.guide-list .guide-character {
+  grid-template-columns: clamp(3.75rem, 16vw, 5.25rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.85rem;
+}
+.guide-portrait {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 0.75rem;
 }
 .guide-list h3 { margin: 0 0 0.15rem; font-size: 1.02rem; color: var(--cream); }
 .guide-list p { margin: 0; color: rgba(251,246,236,0.82); font-size: 0.92rem; }

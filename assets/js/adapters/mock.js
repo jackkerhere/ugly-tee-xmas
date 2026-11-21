@@ -422,11 +422,19 @@
     gameMe() {
       return Promise.resolve({ ok: true, phase: "not_started", dealt: false, isPlayer: false, isHost: false, players: [], reveal: { active: false } });
     },
+    gameLobby() {
+      return Promise.resolve({
+        ok: true, phase: "not_started", open: false, joined: false, count: 0,
+        isHost: false, minPlayers: 5, maxPlayers: 15
+      });
+    },
+    gameLobbySet() { return Promise.resolve({ ok: false, reason: "invalid", message: "Preview only. Join on the live site." }); },
     gameSubmit() { return Promise.resolve({ ok: false, reason: "invalid", message: "Preview only — start a live game to play." }); },
     gameClaimHost() { return Promise.resolve({ ok: false, reason: "invalid", message: "Host tools are live-only. Take ?demo=1 off." }); },
     gameHostLogin() { return Promise.resolve({ ok: false, reason: "invalid", message: "Host tools are live-only." }); },
     gameHostState() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
     gameHostDeal() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
+    gameHostDealLobby() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
     gameHostStart() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
     gameHostAdvance() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
     gameHostReset() { return Promise.resolve({ ok: false, reason: "forbidden" }); },

@@ -7,25 +7,28 @@
   const POLL_TV = 4000;
   const POLL_PLAYER = 5000;
   let pollTimer = null;
+  let pollOnVisible = null;
   let lastSig = "";
+  let hostSetupPending = false;
   let pickId = "";
   let pickId2 = "";
   let pickId3 = "";
 
   const ROLE_META = {
-    grinch: { icon: "💚", name: "Grinch", side: "Bad" },
-    tough_grinch: { icon: "💪", name: "Tough Grinch", side: "Bad" },
-    krampus: { icon: "🐐", name: "Krampus", side: "Bad" },
-    santa: { icon: "🎅", name: "Santa", side: "Nice" },
-    reindeer: { icon: "🦌", name: "Reindeer", side: "Nice" },
-    detective: { icon: "🔎", name: "Elf Detective", side: "Nice" },
-    mrs_claus: { icon: "☕", name: "Mrs Claus", side: "Nice" },
-    gingerbread: { icon: "🍪", name: "Gingerbread Man", side: "Nice" },
-    fruitcake: { icon: "🍰", name: "Fruitcake", side: "Nice" },
-    witness: { icon: "👀", name: "Witness", side: "Nice" },
-    liar_elf: { icon: "🤥", name: "Liar Elf", side: "Nice" },
-    citizen: { icon: "🎄", name: "Citizen", side: "Nice" },
-    snowman: { icon: "⛄", name: "Snowman", side: "Alone" }
+    grinch: { icon: "💚", name: "Grinch", side: "Bad", portrait: "grinch" },
+    tough_grinch: { icon: "💪", name: "Tough Grinch", side: "Bad", portrait: "tough-grinch" },
+    krampus: { icon: "🐐", name: "Krampus", side: "Bad", portrait: "krampus" },
+    santa: { icon: "🎅", name: "Santa", side: "Nice", portrait: "santa" },
+    reindeer: { icon: "🦌", name: "Reindeer", side: "Nice", portrait: "reindeer" },
+    detective: { icon: "🔎", name: "Elf Detective", side: "Nice", portrait: "elf-detective" },
+    mrs_claus: { icon: "☕", name: "Mrs Claus", side: "Nice", portrait: "mrs-claus" },
+    gingerbread: { icon: "🍪", name: "Gingerbread Man", side: "Nice", portrait: "gingerbread-man" },
+    fruitcake: { icon: "🍰", name: "Fruitcake", side: "Nice", portrait: "fruitcake" },
+    witness: { icon: "👀", name: "Witness", side: "Nice", portrait: "witness" },
+    liar_elf: { icon: "🤥", name: "Liar Elf", side: "Nice", portrait: "liar-elf" },
+    citizen: { icon: "🎄", name: "Citizen", side: "Nice", portrait: "citizen" },
+    snowman: { icon: "⛄", name: "Snowman", side: "Alone", portrait: "snowman" },
+    ghost: { name: "Ghosts", portrait: "ghost" }
   };
 
   function api() { return global.InviteData; }
@@ -38,15 +41,27 @@
     if (ui().guestFaceHtml) return ui().guestFaceHtml(name, opts || { className: "is-large", sizes: "96px" });
     return "";
   }
+  function rolePortrait(role, className, loading = "eager") {
+    if (!role.portrait) return "";
+    return `<img class="${className}" src="assets/game-characters/${role.portrait}.webp" width="480" height="480" alt="" loading="${loading}" decoding="async">`;
+  }
   function token() { return ui().currentToken ? ui().currentToken() : ""; }
 
   function stopPoll() {
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    if (pollOnVisible) {
+      document.removeEventListener("visibilitychange", pollOnVisible);
+      pollOnVisible = null;
+    }
   }
 
   function startPoll(fn, ms) {
     stopPoll();
     pollTimer = setInterval(fn, ms);
+    pollOnVisible = () => {
+      if (document.visibilityState === "visible") fn();
+    };
+    document.addEventListener("visibilitychange", pollOnVisible);
   }
 
   function hostToken() {
@@ -82,7 +97,7 @@
   }
 
   function docsHtml(opts) {
-    const back = opts && opts.backGame ? '<p class="game-docs-back"><a href="me.html#game">← Back to Game</a></p>' : "";
+    const back = opts && opts.backGame ? '<p class="game-docs-back"><a href="game.html">← Back to Game</a></p>' : "";
     return `
       <div class="game-docs">
         <a class="btn btn-gold" href="guide.html">Character Guide</a>
@@ -95,26 +110,26 @@
   function guideInnerHtml() {
     const roles = [
       ["Bad", [
-        ["💚", "Grinch ×2", "Each night the Grinches steal one person, together. They win when living Grinches are at least as many as everyone else still standing (Krampus counts as not a Grinch)."],
-        ["💪", "Tough Grinch", "A Grinch with two lives. The Elf Detective sees them as bad. The first unexplained hit only knocks a life off — they stay in the game, and nobody is told why."],
-        ["🐐", "Krampus", "Plays alone, steals one person each night, one life. Wins only if last standing. Not a Grinch: if the Grinches hit their numbers, they win even if Krampus is still around. The Detective sees them as bad."]
+        ["grinch", "Grinch ×2", "Each night the Grinches steal one person, together. They win when living Grinches are at least as many as everyone else still standing (Krampus counts as not a Grinch)."],
+        ["tough_grinch", "Tough Grinch", "A Grinch with two lives. The Elf Detective sees them as bad. The first unexplained hit only knocks a life off — they stay in the game, and nobody is told why."],
+        ["krampus", "Krampus", "Plays alone, steals one person each night, one life. Wins only if last standing. Not a Grinch: if the Grinches hit their numbers, they win even if Krampus is still around. The Detective sees them as bad."]
       ]],
       ["Nice", [
-        ["🎅", "Santa", "Saves one person each night, including themselves. Cannot save the same person two nights in a row."],
-        ["🦌", "Reindeer", "Guards one person each night (not themselves). May guard the same person every night. If that person is stolen they survive — but only if the Reindeer also makes it through the night. The Reindeer is not taken down in their place."],
-        ["🔎", "Elf Detective", "Checks one person each night, then learns whether they are bad (a Grinch, Tough Grinch, or Krampus) or not."],
-        ["☕", "Mrs Claus", "Once per game: Hot Cocoa, which saves tonight’s victim or victims. Once per game: Coal, which poisons anyone. Only one item per night. Cocoa can save her only on night 1."],
-        ["🍪", "Gingerbread Man", "No night power while in the game. When out, they pick one player to take down with them."],
-        ["🍰", "Fruitcake", "Two lives, no night power. The first unexplained hit costs a life and they stay in. Nobody is told why they survived."],
-        ["👀", "Witness", "On night 1 they are shown one Grinch. They may only hint — they must not say the name outright."],
-        ["🤥", "Liar Elf", "No night power. They may only lie. If they tell the truth, they’re out."],
-        [ROLE_META.citizen.icon, ROLE_META.citizen.name, "Votes during the day and checks in at night. Has no special powers."]
+        ["santa", "Santa", "Saves one person each night, including themselves. Cannot save the same person two nights in a row."],
+        ["reindeer", "Reindeer", "Guards one person each night (not themselves). May guard the same person every night. If that person is stolen they survive — but only if the Reindeer also makes it through the night. The Reindeer is not taken down in their place."],
+        ["detective", "Elf Detective", "Checks one person each night, then learns whether they are bad (a Grinch, Tough Grinch, or Krampus) or not."],
+        ["mrs_claus", "Mrs Claus", "Once per game: Hot Cocoa, which saves tonight’s victim or victims. Once per game: Coal, which poisons anyone. Only one item per night. Cocoa can save her only on night 1."],
+        ["gingerbread", "Gingerbread Man", "No night power while in the game. When out, they pick one player to take down with them."],
+        ["fruitcake", "Fruitcake", "Two lives, no night power. The first unexplained hit costs a life and they stay in. Nobody is told why they survived."],
+        ["witness", "Witness", "On night 1 they are shown one Grinch. They may only hint — they must not say the name outright."],
+        ["liar_elf", "Liar Elf", "No night power. They may only lie. If they tell the truth, they’re out."],
+        ["citizen", "Citizen", "Votes during the day and checks in at night. Has no special powers."]
       ]],
       ["Alone", [
-        ["⛄", "Snowman", "Wins if the group votes them out. The game then continues for everyone else. Being stolen at night does not count."]
+        ["snowman", "Snowman", "Wins if the group votes them out. The game then continues for everyone else. Being stolen at night does not count."]
       ]],
       ["After you’re out", [
-        ["👻", "Ghosts", "Each night, as a group: one clue about a dead player’s killer (a Grinch, Krampus, or a Christmas twist — Mrs Claus, the Gingerbread Man, or a vote). Haunt one living player, who loses their vote the next day. Once a game, possess a living player’s vote and choose it for them. Each ghost may also predict the winning side; if the majority is right, every ghost spins the gachapon."]
+        ["ghost", "Ghosts", "Each night, as a group: one clue about a dead player’s killer (a Grinch, Krampus, or a Christmas twist — Mrs Claus, the Gingerbread Man, or a vote). Haunt one living player, who loses their vote the next day. Once a game, possess a living player’s vote and choose it for them. Each ghost may also predict the winning side; if the majority is right, every ghost spins the gachapon."]
       ]],
       ["Host optional chaos", [
         ["🌨️", "Blizzard", "No kills or saves tonight. Players still lock in a night tap, so nobody can tell."],
@@ -135,14 +150,20 @@
         <section class="guide-side">
           <h2>${escapeHtml(side)}</h2>
           <ul class="guide-list">
-            ${list.map(([icon, name, blurb]) => `
-              <li>
-                <span class="guide-icon" aria-hidden="true">${icon}</span>
-                <div>
-                  <h3>${escapeHtml(name)}</h3>
-                  <p>${escapeHtml(blurb)}</p>
-                </div>
-              </li>`).join("")}
+            ${list.map(([symbol, name, blurb]) => {
+              const character = ROLE_META[symbol];
+              const artwork = character
+                ? rolePortrait(character, "guide-portrait", "lazy")
+                : `<span class="guide-icon" aria-hidden="true">${symbol}</span>`;
+              return `
+                <li${character ? ' class="guide-character"' : ""}>
+                  ${artwork}
+                  <div>
+                    <h3>${escapeHtml(name)}</h3>
+                    <p>${escapeHtml(blurb)}</p>
+                  </div>
+                </li>`;
+            }).join("")}
           </ul>
         </section>`).join("")}
       ${docsHtml({ backGame: true })}
@@ -157,7 +178,7 @@
         <p class="lede">A comedic Christmas murder mystery at Brenda and Jack’s. Someone stole Christmas. You have ugly tees, snacks, and one job: figure it out — or get away with it.</p>
       </header>
       <ol class="howto-steps">
-        <li><h3>Setup</h3><p>One guest is the host and does not play. The host selects who is playing. Players open My page → Game. Until the host taps <strong>Shuffle roles</strong>, nobody has a role. With 14 players, the game adds one Citizen. With 15 players, it adds two. After the shuffle, you only ever see your own card. The host may shuffle again until they start the story.</p></li>
+        <li><h3>Setup</h3><p>Open the <a href="game.html">Game tab</a>, sign in, and tap <strong>Join lobby</strong>. Jack hosts. The lobby takes 5 to 15 players and closes when Jack shuffles. With 14 players, the game adds one Citizen. With 15 players, it adds two. You see your own card after the shuffle.</p></li>
         <li><h3>Night</h3><p>Everyone still in the game locks in something on their phone — even if your role has no power — so nobody can tell who is acting. Submissions are locked. The Grinches steal together; Krampus steals alone; Santa, the Reindeer, the Detective and Mrs Claus do their quiet festive work.</p></li>
         <li><h3>Morning reveal</h3><p>The TV tells it like a cliffhanger: someone is on the brink… then BAM, they’re out, or a mysterious rescue saves them. The host advances the story beat by beat. If someone lives, nobody is told why (a save, or a second life — same vibe, no credits).</p></li>
         <li><h3>Day vote</h3><p>Talk, accuse, then vote. A tie means nobody is out. There is a near-miss pause before the result. If the Snowman is voted out, they wanted this, they win, and the game continues. Anyone who is out takes a shot or a gachapon capsule.</p></li>
@@ -177,11 +198,11 @@
         <h1 class="outline-red">Who Stole Christmas?</h1>
         <p class="lede">A Mafia-style party game with cliffhangers, mysterious rescues, and optional plot twists. Roles stay secret until the host shuffles — and even then, you only see your own.</p>
       </header>
+      <div id="game-play-root"></div>
       <div class="game-hub-grid">
         <a class="card game-hub-card" href="how-to-play.html"><h2>How to Play</h2><p>Setup, nights, morning reveals, votes, ghosts, twists, and how to win.</p></a>
         <a class="card game-hub-card" href="guide.html"><h2>Character Guide</h2><p>Every role, the ghosts, and the twist cards — no spoilers about tonight’s deal.</p></a>
         <a class="card game-hub-card" href="tv.html"><h2>TV screen</h2><p>The big public view: the story, who’s in, and the winner. No secrets.</p></a>
-        <a class="card game-hub-card" href="me.html#game"><h2>I’m playing</h2><p>Open your Game tab on My page (log in with your PIN).</p></a>
       </div>
       <p class="game-docs-note"><a href="host.html">Host screen</a> — for the narrator only.</p>
     `;
@@ -197,7 +218,102 @@
   }
   function renderHub(root) {
     if (!root) return;
+    stopPoll();
     root.innerHTML = '<div class="guide-page">' + hubInnerHtml() + "</div>";
+    const playRoot = $("#game-play-root", root);
+    if (token()) {
+      playRoot.insertAdjacentHTML("afterend", '<p class="logout-line"><button class="game-sign-out" type="button">Sign out</button></p>');
+      const signOut = $(".game-sign-out", root);
+      if (ui().logoutGuest) signOut.addEventListener("click", ui().logoutGuest);
+      renderLobby(playRoot);
+    } else {
+      playRoot.innerHTML = `<article class="card game-wait">
+        <h2>Join the game</h2>
+        <button type="button" class="btn btn-gold" id="game-sign-in">Sign in to play</button>
+      </article>`;
+      $("#game-sign-in", playRoot).addEventListener("click", () => {
+        if (ui().renderClaimGate) ui().renderClaimGate(playRoot);
+      });
+    }
+  }
+
+  function renderLobby(root) {
+    const a = api();
+    const guestToken = token();
+    let polling = false;
+    let updating = false;
+    let revision = 0;
+    let lastLobby = "";
+    root.innerHTML = '<p class="lede" style="text-align:center">Opening the lobby…</p>';
+    if (!guestToken || !a || !a.gameLobby) return;
+
+    const paint = (lobby) => {
+      if (!root.isConnected) return;
+      if (!lobby || !lobby.ok) {
+        if (lastLobby === "error") return;
+        lastLobby = "error";
+        root.innerHTML = `<article class="card game-wait">
+          <h2>Couldn’t open the lobby</h2>
+          <p>${escapeHtml((lobby && lobby.message) || "Check your sign-in and try again.")}</p>
+        </article>`;
+        return;
+      }
+      if (!lobby.open && lobby.joined && !lobby.isHost) {
+        renderPlayer(root);
+        return;
+      }
+      const next = JSON.stringify(lobby);
+      if (lastLobby === next) return;
+      lastLobby = next;
+      const canJoin = lobby.count < lobby.maxPlayers;
+      const choice = lobby.joined
+        ? '<button id="game-leave-lobby" class="btn btn-gold" type="button">Leave lobby</button>'
+        : `<button id="game-join-lobby" class="btn btn-gold" type="button"${canJoin ? "" : " disabled"}>Join lobby</button>`;
+      const status = lobby.joined ? "You’re in. Wait for Jack to shuffle." : canJoin ? "" : "The lobby is full.";
+      const heading = lobby.isHost ? "You’re hosting" : lobby.open ? "Game lobby" : "This round has started";
+      const previousButton = root.contains(document.activeElement) && document.activeElement.id;
+      root.innerHTML = `<article class="card game-wait game-lobby">
+        <h2>${heading}</h2>
+        <p id="game-lobby-count" aria-live="polite">${lobby.count} of ${lobby.maxPlayers} players joined</p>
+        ${lobby.isHost ? '<a class="btn btn-gold" href="host.html">Open host screen</a>' : lobby.open ? `<p>${status}</p>${choice}` : '<a href="tv.html">Watch on the TV screen</a>'}
+        <p class="form-status" id="game-status" role="status" hidden></p>
+      </article>`;
+      const button = $("#game-join-lobby, #game-leave-lobby", root);
+      if (!button) return;
+      if (previousButton === button.id && !button.disabled) button.focus();
+      button.addEventListener("click", async () => {
+        if (updating) return;
+        button.disabled = true;
+        updating = true;
+        revision += 1;
+        try {
+          const changed = await a.gameLobbySet(guestToken, !lobby.joined);
+          if (changed && changed.ok) paint(changed);
+          else setStatus(root, (changed && changed.message) || "Couldn’t update the lobby. Try again.", false);
+        } catch (_) {
+          setStatus(root, "Couldn’t update the lobby. Try again.", false);
+        } finally {
+          updating = false;
+          button.disabled = false;
+        }
+      });
+    };
+    const refresh = async () => {
+      if (!root.isConnected || polling || updating) return;
+      polling = true;
+      const startingRevision = revision;
+      try {
+        const state = await a.gameLobby(guestToken);
+        if (startingRevision === revision) paint(state);
+      }
+      catch (_) {
+        if (!lastLobby && startingRevision === revision) paint(null);
+      } finally {
+        polling = false;
+      }
+    };
+    startPoll(refresh, POLL_PLAYER);
+    refresh();
   }
 
   function rosterHtml(players, opts) {
@@ -280,7 +396,9 @@
     }
     if (!you.alive) {
       const clue = d.phase === "night" && !d.locked;
-      return `<div class="card game-action"><h3>Ghost duties</h3>
+      return `<div class="card game-action">
+        ${rolePortrait(ROLE_META.ghost, "game-ghost-portrait")}
+        <h3>Ghost duties</h3>
         <p>You’re out — take a shot or a gachapon capsule. As a ghost, you still have night work when the lights go down.</p>
         ${d.phase !== "night" ? "<p>Wait for night for clues, haunts, and (once) a possession.</p>" : ""}
         ${d.phase === "night" && d.locked ? "<p>Locked in. Wait for the host.</p>" : ""}
@@ -371,10 +489,10 @@
 
   function roleCardHtml(d) {
     const you = d.you || {};
-    const meta = ROLE_META[you.role] || { icon: "🎁", name: you.roleName || "Role", side: "" };
+    const meta = ROLE_META[you.role] || { name: you.roleName || "Role", side: "" };
     const fellows = (d.fellowGrinches || []).map((g) => escapeHtml(g.display_name)).join(", ");
     return `<article class="card game-role-card">
-      <p class="game-role-icon" aria-hidden="true">${meta.icon}</p>
+      ${rolePortrait(meta, "game-role-portrait")}
       <p class="kicker">${escapeHtml(meta.side)}</p>
       <h2>${escapeHtml(you.roleName || meta.name)}</h2>
       <p>${escapeHtml(you.ability || "")}</p>
@@ -511,8 +629,13 @@
       return Promise.resolve();
     }
     return a.gameMe(token()).then((d) => {
+      if (!root.isConnected) return;
       if (!d || !d.ok) {
         renderPlayerInto(root, { dealt: false, isPlayer: false });
+        return;
+      }
+      if (root.id === "game-play-root" && (!d.dealt || !d.isPlayer)) {
+        renderLobby(root);
         return;
       }
       const sig = [d.phase, d.dealt, d.locked, d.nightNumber, d.dayNumber, d.winnerSide, d.reveal && d.reveal.beatIndex, d.reveal && d.reveal.sceneIndex, d.you && d.you.role, (d.submitted || []).join(",")].join("|");
@@ -531,14 +654,12 @@
     root.innerHTML = '<p class="lede" style="text-align:center">Opening the game…</p>';
     refreshPlayer(root, true);
     startPoll(() => refreshPlayer(root, false), POLL_PLAYER);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") refreshPlayer(root, false);
-    });
   }
 
   /* ---------- Host ---------- */
   function renderHost(root) {
     if (!root) return;
+    stopPoll();
     lastSig = "";
     if (!hostToken()) {
       renderHostLogin(root);
@@ -595,8 +716,9 @@
   function refreshHost(root, force) {
     const a = api();
     const ht = hostToken();
-    if (!a || !ht) return Promise.resolve();
+    if (!a || !ht || (!force && hostSetupPending)) return Promise.resolve();
     return a.gameHostState(ht).then((d) => {
+      if (!root.isConnected || (!force && hostSetupPending)) return;
       if (!d || !d.ok) {
         if (d && d.reason === "forbidden") {
           setHostToken("");
@@ -606,7 +728,8 @@
       }
       const sig = JSON.stringify({
         p: d.phase, sc: d.reveal && d.reveal.sceneIndex, b: d.reveal && d.reveal.beatIndex,
-        sub: d.submittedCount, exp: d.expectedCount, deal: d.dealt, tw: d.availableTwists, w: d.winnerSide
+        sub: d.submittedCount, exp: d.expectedCount, deal: d.dealt, tw: d.availableTwists, w: d.winnerSide,
+        lobby: d.lobby
       });
       if (!force && sig === lastSig) return;
       lastSig = sig;
@@ -614,60 +737,40 @@
     }).catch(() => {});
   }
 
-  function mountHostRoster(root, d, adapter, hostToken) {
-    const fields = $("#host-roster", root);
-    if (!fields) return;
-
-    const buttons = $allC("#host-shuffle, #host-reshuffle", root);
-    const start = $("#host-start", root);
-    const count = $("#host-player-count", root);
-    const currentPlayers = new Set((d.players || []).map((player) => player.id));
-
-    adapter.listGuestsPublic().then((res) => {
-      if (fields !== $("#host-roster", root)) return;
-      if (!res || !res.ok) throw new Error("Could not load players.");
-
-      const guests = res.guests || [];
-      const host = guests.find((guest) => guest.display_name === d.hostName && !guest.is_demo && !guest.is_test);
-      if (!host) throw new Error("Could not load the host account.");
-      const players = guests.filter((guest) => guest.display_name && guest.id !== host.id && !guest.is_demo && !guest.is_test);
-      fields.innerHTML = `<legend>Players</legend><div class="game-pick-grid">${players.map((player) => `
-        <label class="game-pick"><input type="checkbox" value="${escapeHtml(player.id)}"${!d.dealt || currentPlayers.has(player.id) ? " checked" : ""}>
-        ${escapeHtml(player.display_name)}</label>`).join("")}</div>`;
-
-      const selected = () => $allC("input:checked", fields).map((input) => input.value);
-      const updateSelection = () => {
-        const ids = selected();
-        const valid = ids.length >= 5 && ids.length <= 15;
-        const hasChanges = d.dealt && (ids.length !== currentPlayers.size || ids.some((id) => !currentPlayers.has(id)));
-        count.textContent = `${ids.length} selected${!valid ? " · Choose 5 to 15 players" : hasChanges ? " · Shuffle to use this roster" : ""}`;
-        buttons.forEach((button) => { button.disabled = !valid; });
-        if (start) start.disabled = !valid || hasChanges;
-      };
-      fields.addEventListener("change", updateSelection);
-      updateSelection();
-
-      const shuffle = async () => {
-        const ids = selected();
-        buttons.forEach((button) => { button.disabled = true; });
-        if (start) start.disabled = true;
-        fields.disabled = true;
-        try {
-          const result = await adapter.gameHostDeal(hostToken, ids);
-          if (!result || !result.ok) throw new Error((result && result.message) || "Shuffle failed.");
-          lastSig = "";
-          await refreshHost(root, true);
-        } catch (err) {
-          setStatus(root, err.message || "Shuffle failed.", false);
-        } finally {
-          fields.disabled = false;
-          updateSelection();
-        }
-      };
-      buttons.forEach((button) => button.addEventListener("click", shuffle));
-    }).catch(() => {
-      if (fields === $("#host-roster", root)) count.textContent = "Could not load players. Reload the host screen to try again.";
+  function bindHostSetup(root, selector, run, message) {
+    const button = $(selector, root);
+    if (!button) return;
+    button.addEventListener("click", async () => {
+      if (hostSetupPending) return;
+      hostSetupPending = true;
+      button.disabled = true;
+      try {
+        const result = await run();
+        if (result && result.ok) await refreshHost(root, true);
+        else setStatus(root, (result && result.message) || message, false);
+      } catch (_) {
+        setStatus(root, message, false);
+      } finally {
+        hostSetupPending = false;
+        button.disabled = false;
+      }
     });
+  }
+
+  function hostLobbyHtml(d) {
+    if (!d.lobby) return '<div class="card game-shuffle-wrap"><h3>Lobby</h3><p>Reload this page to open the lobby.</p></div>';
+    const { count, minPlayers, maxPlayers, members } = d.lobby;
+    const ready = count >= minPlayers && count <= maxPlayers;
+    return `<div class="card game-shuffle-wrap game-lobby">
+      <h3>Lobby</h3>
+      <p id="host-player-count" aria-live="polite">${count} of ${maxPlayers} players joined</p>
+      ${d.dealt ? "<p>Roles dealt. The lobby is closed for this round.</p>" : '<p>Players join from the <a href="game.html">Game tab</a>.</p>'}
+      ${!d.dealt && members.length ? '<ul class="game-lobby-members">' + members.map((member) => `<li>${escapeHtml(member.display_name)}</li>`).join("") + '</ul>' : ""}
+      ${!ready ? `<p>At least ${minPlayers} players must join before you can shuffle.</p>` : ""}
+      <button type="button" class="btn btn-gold btn-shuffle" id="host-shuffle"${ready ? "" : " disabled"}>${d.canReshuffle ? "Shuffle again" : "Shuffle roles"}</button>
+      ${d.canStart ? '<button type="button" class="btn btn-gold" id="host-start">Start the story</button>' : ""}
+      <p class="form-status" id="game-status" role="status" hidden></p>
+    </div>`;
   }
 
   function paintHost(root, d) {
@@ -677,13 +780,11 @@
     const twists = d.availableTwists || [];
     let mid = "";
     if (d.canShuffle) {
-      mid += `<div class="card game-shuffle-wrap">
-        <fieldset id="host-roster" aria-describedby="host-player-count"><legend>Players</legend></fieldset>
-        <p class="game-muted" id="host-player-count" aria-live="polite">Loading players…</p>
-        <button type="button" class="btn btn-gold btn-shuffle" id="host-shuffle" disabled>Shuffle roles</button>
-        ${d.canReshuffle ? '<button type="button" class="btn btn-ghost" id="host-reshuffle" disabled>Shuffle again</button>' : ""}
-        ${d.canStart ? '<button type="button" class="btn btn-gold" id="host-start" disabled>Start the story</button>' : ""}
-        <p class="form-status" id="game-status" hidden></p>
+      mid += hostLobbyHtml(d);
+    } else if (d.phase === "ended") {
+      mid += `<div class="card game-shuffle-wrap game-lobby">
+        <button class="btn btn-gold" id="host-new-lobby" type="button">Open a new lobby</button>
+        <p class="form-status" id="game-status" role="status" hidden></p>
       </div>`;
     }
     if (d.phase === "reveal") {
@@ -722,9 +823,9 @@
       <p class="logout-line"><a href="host.html" id="host-logout">Log out of host screen</a></p>
     `;
 
-    mountHostRoster(root, d, a, ht);
-    const start = $("#host-start", root);
-    if (start) start.addEventListener("click", () => a.gameHostStart(ht).then(() => { lastSig = ""; refreshHost(root, true); }));
+    bindHostSetup(root, "#host-shuffle", () => a.gameHostDealLobby(ht), "Couldn’t shuffle. Try again.");
+    bindHostSetup(root, "#host-start", () => a.gameHostStart(ht), "Couldn’t start the story. Try again.");
+    bindHostSetup(root, "#host-new-lobby", () => a.gameHostReset(ht), "Couldn’t open a new lobby. Try again.");
     const adv = $("#host-advance", root);
     if (adv) adv.addEventListener("click", () => a.gameHostAdvance(ht).then(() => { lastSig = ""; refreshHost(root, true); }));
     const skip = $("#host-skip-twist", root);
