@@ -182,7 +182,7 @@
 
   const TOWN_GOAL = "Get every Grinch and Krampus out.";
   const GRINCH_GOAL = "Match or outnumber all other living players combined.";
-  const KRAMPUS_GOAL = "Take out one Grinch and one Concertorant with your own night hits. Play continues.";
+  const KRAMPUS_GOAL = "Take out one Grinch and one Concertorant with your own night hits (the round continues), or be the last one standing.";
   const KRAMPUS_WIN = "Krampus earned a personal win.";
   const SNOWMAN_GOAL = "Win if the village votes you out. The round keeps going. If a night hit takes you out, you become a ghost.";
   const GHOST_GOAL = "You’re already dead, sorry.";
@@ -394,7 +394,7 @@
         <li><h3>Day vote</h3><p>Discuss for 3 minutes and 30 seconds, then vote for a player or choose <strong>Spare everyone</strong>. A player with the most votes becomes a ghost immediately, even with an extra life. Everyone stays in if Spare everyone wins, the top vote ties, or no votes are counted. If the Snowman is voted out, they wanted this, they win, and the game continues. Anyone who is out takes a shot or a gachapon capsule. If you close the page or sign out, you stay in the game — sign back in with your PIN.</p></li>
         <li><h3>Ghosts</h3><p>The Ghosts can share one clue each morning about what caused a death. Keep the killer’s name secret. Ghosts can also block a player’s next vote or choose someone to take a shot.</p></li>
         <li><h3>Twists</h3><p>The host can play one power per night and the morning that follows. Play Blizzard before pressing Next at night. The other powers are played in the morning.</p></li>
-        <li><h3>How to win</h3><p><strong>Concertorants</strong> win when every Grinch and Krampus is out. <strong>Grinches</strong> win when living Grinches are at least as many as everyone else still alive (Krampus counts as not a Grinch). <strong>Krampus</strong> wins by taking out one Grinch and one Concertorant with his own night attacks. The round continues after a Krampus or Snowman win.</p></li>
+        <li><h3>How to win</h3><p><strong>Concertorants</strong> win when every Grinch and Krampus is out. <strong>Grinches</strong> win when living Grinches are at least as many as everyone else still alive (Krampus counts as not a Grinch). <strong>Krampus</strong> wins the round if he is the last one standing. He can also earn a personal win by taking out one Grinch and one Concertorant with his own night attacks; that personal win does not end the round. The round continues after a Snowman win too.</p></li>
       </ol>
       <p class="howto-foot">The game uses a smaller deck for groups of 5 to 12 players.</p>
       ${docsHtml({ backGame: true })}
