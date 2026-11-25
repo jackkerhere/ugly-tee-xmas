@@ -20,8 +20,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css?v=20261121-spare-vote">
-  <link rel="stylesheet" href="assets/css/tv-slideshow.css?v=20261121-tv-slideshow">
+  <link rel="stylesheet" href="assets/css/styles.css?v=20261125-party-release">
+  <link rel="stylesheet" href="assets/css/tv-slideshow.css?v=20261123-tv-stage">
+  <link rel="preload" as="image" href="assets/tv/story-piano-bus-stop.webp">
+  <link rel="preload" as="image" href="assets/tv/story-piano-stop-clean.webp">
+  <link rel="preload" as="image" href="assets/tv/story-piano-layer.webp">
+  <link rel="preload" as="image" href="assets/tv/story-dawn-lane.webp">
   <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="assets/images/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="assets/images/apple-touch-icon.png">
@@ -34,43 +38,19 @@
   <div class="snow" aria-hidden="true"></div>
 
   <div class="wrap">
-  <header class="site-header">
-    <div class="nav-inner">
-      <a class="brand" href="index.html">
-        <img class="brand-mark" src="assets/images/favicon.svg" width="36" height="36" alt="">
-        <span class="brand-name">Ugly Tee Christmas</span>
-      </a>
-      <nav class="site-nav" aria-label="Primary">
-        <a href="index.html">Home</a>
-        <a href="itinerary.html">Itinerary</a>
-        <a href="menu.html">Menu</a>
-        <a href="game.html">Game</a>
-        <a href="me.html">My page <span class="nav-unread" hidden></span><span class="soon">private</span></a>
-      </nav>
-    </div>
-  </header>
-
   <main id="main" class="section">
-    <div class="tv-music-controls">
-      <button type="button" class="btn btn-gold" id="tv-music-toggle">Play background music</button>
-      <p id="tv-music-status" class="tv-music-status" role="status"></p>
-    </div>
     <div id="tv-root">
-      <p class="lede" style="text-align:center">The game will appear here.</p>
+      <p class="lede page-status">The game will appear here.</p>
     </div>
   </main>
-  <footer class="site-footer">
-    <p>Ugly Tee Christmas · Saturday 19 December 2026 · 6:30pm</p>
-    <p>at Brenda and Jack’s</p>
-  </footer>
-
   </div>
-  <audio id="tv-background-music" src="assets/song.mp3" preload="auto" loop playsinline></audio>
-  <script src="assets/js/data.js?v=20261121-character-cards" defer></script>
-  <script src="assets/js/adapters/mock.js?v=20261121-character-cards" defer></script>
-  <script src="assets/js/adapters/supabase.js?v=20261121-character-cards" defer></script>
-  <script src="assets/js/tv-slideshow.js?v=20261121-spare-vote" defer></script>
-  <script src="assets/js/game.js?v=20261121-spare-vote" defer></script>
-  <script src="assets/js/main.js?v=20261121-guest-name" defer></script>
+  <audio id="tv-background-music" src="assets/song.mp3" preload="none" loop playsinline></audio>
+  <script src="assets/js/data.js?v=20261123-host-tv-story" defer></script>
+  <script src="assets/js/adapters/mock.js?v=20261123-host-tv-story" defer></script>
+  <script src="assets/js/adapters/supabase.js?v=20261123-host-tv-story" defer></script>
+  <script src="assets/js/tv-comic-catalog.js?v=20261123-comic-library" defer></script>
+  <script src="assets/js/tv-slideshow.js?v=20261123-distinct-tv-frames" defer></script>
+  <script src="assets/js/game.js?v=20261125-party-release" defer></script>
+  <script src="assets/js/main.js?v=20261122-aligned-actions" defer></script>
 </body>
 </html>

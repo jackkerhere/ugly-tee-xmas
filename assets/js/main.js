@@ -612,7 +612,7 @@
           ${guestFaceHtml(guest.name, { className: "is-large", sizes: "176px" })}
           <h1 class="outline-red" style="-webkit-text-stroke:4px #fff">Are you ${escapeHtml(guest.name)}?</h1>
           <p class="pin-lead">Only claim this name if it is you. Your page is private once it is locked to your PIN.</p>
-          <div class="form-actions" style="justify-content:center;margin-top:1.2rem">
+          <div class="form-actions">
             <button type="button" class="btn btn-gold" id="confirm-yes">Yes, that’s me</button>
             <button type="button" class="btn btn-ghost" id="confirm-no" style="color:var(--navy);border-color:#e0d4bf">Not me</button>
           </div>
@@ -862,7 +862,7 @@
 
   function renderClaimGate(root) {
     if (!root || !globalInvite()) return;
-    root.innerHTML = '<p class="lede" style="text-align:center">Finding everyone…</p>';
+    root.innerHTML = '<p class="lede page-status">Finding everyone…</p>';
     const error = () => {
       root.innerHTML = gateHtml("We can’t open the name list just now.", "Please refresh and try again.") +
         `<p class="logout-line"><a href="${withToken(guestPage())}">Try again</a></p>`;

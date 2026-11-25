@@ -155,12 +155,20 @@
       const digits = String(pin || "").replace(/\D/g, "");
       return rpc("game_host_login", { guest_id: guestId, pin: digits });
     },
+    gameHostTvPreview(hostToken) { return rpc("game_host_tv_preview", { host_token: String(hostToken || "").trim() }); },
     gameHostState(hostToken) { return rpc("game_host_state", { host_token: String(hostToken || "").trim() }); },
     gameHostDeal(hostToken, playerIds) {
       return rpc("game_host_deal", { host_token: String(hostToken || "").trim(), player_ids: playerIds || [] });
     },
     gameHostDealLobby(hostToken) {
       return rpc("game_host_deal_lobby", { host_token: String(hostToken || "").trim() });
+    },
+    gameHostStartTownHall(hostToken) { return rpc("game_host_start_town_hall", { host_token: String(hostToken || "").trim() }); },
+    gameHostSkipTownHall(hostToken, expectedDeadline) {
+      return rpc("game_host_skip_town_hall", {
+        host_token: String(hostToken || "").trim(),
+        expected_deadline: expectedDeadline
+      });
     },
     gameHostStart(hostToken) { return rpc("game_host_start", { host_token: String(hostToken || "").trim() }); },
     gameHostAdvance(hostToken) { return rpc("game_host_advance", { host_token: String(hostToken || "").trim() }); },
