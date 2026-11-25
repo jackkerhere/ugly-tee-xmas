@@ -115,6 +115,14 @@
     return Number.isInteger(night) && night > 0 ? "Morning " + (night + 1) : "Morning";
   }
 
+  function isFirstMorning(d) {
+    return Number(d?.nightNumber) === 1 && ["reveal", "town_hall", "day", "morning", "twist"].includes(d?.phase);
+  }
+
+  function firstMorningNote() {
+    return "There is no Morning 1. Town Hall and the first vote happen now.";
+  }
+
   function phaseLabel(d) {
     const phase = (d && d.phase) || "not_started";
     const n = d && d.nightNumber;
@@ -326,10 +334,13 @@
     `;
   }
 
-  function roleCardContents(role, { title, rows, note, goal, guide = false, phase, out = false }) {
+  function roleCardContents(role, { title, rows, note, goal, guide = false, phase, out = false, lives, livesMax } = {}) {
     const character = ROLE_META[role] || {};
     const team = CARD_TEAMS[character.side];
-    const hp = out ? 0 : character.hp ?? 1;
+    const maxHp = livesMax ?? character.hp ?? 1;
+    const hp = out ? 0 : (lives ?? maxHp);
+    const hpLabel = guide ? (maxHp ? "Starting HP" : "HP") : "HP";
+    const hpValue = !guide && livesMax != null ? `${hp} / ${livesMax}` : String(hp);
     const portrait = rolePortrait(character, "role-card-portrait");
     const nameTag = guide ? "h2" : "h1";
     const sectionTag = guide ? "h3" : "h2";
@@ -343,7 +354,7 @@
             <strong>${team.label}</strong><span>${team.name}</span>
           </div>` : ""}
           <div class="role-card-hp">
-            <span>${hp ? "Starting HP" : "HP"}</span><strong>${hp}</strong>
+            <span>${hpLabel}</span><strong>${hpValue}</strong>
           </div>
         </div>
         <div class="role-card-name">
@@ -379,11 +390,11 @@
       <ol class="howto-steps">
         <li><h3>Setup</h3><p>Open the <a href="game.html">Game tab</a>, sign in, and tap <strong>Join lobby</strong>. Jack hosts. The lobby takes 5 to 15 players and closes when Jack shuffles. The 13-player deck includes two Fruitcakes. The game adds one Citizen at 14 players and two at 15. You see your own card after the shuffle.</p></li>
         <li><h3>Night</h3><p>Start at Night 1. Everyone still in the game makes a private choice on their phone. Submissions are locked. The Grinches steal together; Krampus steals alone; Santa, the Reindeer, the Detective and Mrs Claus do their quiet festive work.</p></li>
-        <li><h3>Morning reveal</h3><p>The TV tells it like a cliffhanger: someone is on the brink… then BAM, they’re out, or a mysterious rescue saves them. The host advances the story beat by beat. If someone survives a night hit, the reason stays secret. The Tough Grinch and both Fruitcakes can each survive one night hit.</p></li>
-        <li><h3>Day vote</h3><p>Discuss for 3 minutes and 30 seconds, then vote for a player or choose <strong>Spare everyone</strong>. A player with the most votes becomes a ghost immediately, even with an extra life. Everyone stays in if Spare everyone wins, the top vote ties, or no votes are counted. If the Snowman is voted out, they wanted this, they win, and the game continues. Anyone who is out takes a shot or a gachapon capsule.</p></li>
+        <li><h3>Morning reveal</h3><p>There is no Morning 1. After Night 1, the first reveal, Town Hall and the first vote happen on Morning 2. The TV tells it like a cliffhanger: someone is on the brink… then BAM, they’re out, or a mysterious rescue saves them. The host advances the story beat by beat. If someone survives a night hit, the reason stays secret. The Tough Grinch and both Fruitcakes can each survive one night hit.</p></li>
+        <li><h3>Day vote</h3><p>Discuss for 3 minutes and 30 seconds, then vote for a player or choose <strong>Spare everyone</strong>. A player with the most votes becomes a ghost immediately, even with an extra life. Everyone stays in if Spare everyone wins, the top vote ties, or no votes are counted. If the Snowman is voted out, they wanted this, they win, and the game continues. Anyone who is out takes a shot or a gachapon capsule. If you close the page or sign out, you stay in the game — sign back in with your PIN.</p></li>
         <li><h3>Ghosts</h3><p>The Ghosts can share one clue each morning about what caused a death. Keep the killer’s name secret. Ghosts can also block a player’s next vote or choose someone to take a shot.</p></li>
         <li><h3>Twists</h3><p>The host can play one power per night and the morning that follows. Play Blizzard before pressing Next at night. The other powers are played in the morning.</p></li>
-        <li><h3>How to win</h3><p><strong>Nice</strong> win when every Grinch and Krampus is out. <strong>Grinches</strong> win when living Grinches are at least as many as everyone else still alive (Krampus counts as not a Grinch). <strong>Krampus</strong> wins by taking out one Grinch and one Concertorant with his own night attacks. The round continues after a Krampus or Snowman win.</p></li>
+        <li><h3>How to win</h3><p><strong>Concertorants</strong> win when every Grinch and Krampus is out. <strong>Grinches</strong> win when living Grinches are at least as many as everyone else still alive (Krampus counts as not a Grinch). <strong>Krampus</strong> wins by taking out one Grinch and one Concertorant with his own night attacks. The round continues after a Krampus or Snowman win.</p></li>
       </ol>
       <p class="howto-foot">The game uses a smaller deck for groups of 5 to 12 players.</p>
       ${docsHtml({ backGame: true })}
@@ -571,7 +582,7 @@
       const signOut = $(".game-sign-out", root);
       if (ui().logoutGuest) {
         signOut.addEventListener("click", (event) => {
-          if (global.confirm("Sign out of the game?")) ui().logoutGuest(event);
+          if (global.confirm("Sign out on this phone? You stay in the game and can sign back in with your PIN.")) ui().logoutGuest(event);
         });
       }
       renderLobby(playRoot);
@@ -619,7 +630,7 @@
         ? '<button id="game-leave-lobby" class="btn btn-gold" type="button">Leave lobby</button>'
         : `<button id="game-join-lobby" class="btn btn-gold" type="button"${canJoin ? "" : " disabled"}>Join lobby</button>`;
       const status = lobby.joined ? "You’re in. Wait for the host to shuffle." : canJoin ? "" : "The lobby is full.";
-      const heading = lobby.isHost ? "You’re hosting" : lobby.open ? "Game lobby" : "This round has started";
+      const heading = lobby.isHost ? "You’re hosting" : lobby.open ? (lobby.rehearsal ? "Rehearsal lobby" : "Game lobby") : "This round has started";
       const previousButton = root.contains(document.activeElement) && document.activeElement.id;
       root.innerHTML = `<article class="card game-wait game-lobby">
         <h2>${heading}</h2>
@@ -632,6 +643,7 @@
       if (previousButton === button.id && !button.disabled) button.focus();
       button.addEventListener("click", async () => {
         if (updating) return;
+        if (lobby.joined && !global.confirm("Leave the lobby? You can join again before the host shuffles.")) return;
         button.disabled = true;
         updating = true;
         revision += 1;
@@ -858,7 +870,7 @@
     const others = playerOptions(d.living, [you.id]);
     const living = playerOptions(d.living);
     if (phase === "ended") {
-      const bonus = d.ghostsBonus ? " The ghosts earned a gachapon spin." : "";
+      const bonus = "";
       const personalWin = d.krampusWon && d.winnerSide !== "krampus" && you.role !== "krampus" ? " " + KRAMPUS_WIN : "";
       return { title: "Game over", note: (d.winnerText || "The round is over.") + personalWin + bonus };
     }
@@ -1095,6 +1107,8 @@
     if (d.ghostShot) notes.push("The Ghosts picked you to take a shot.");
     if (allies) notes.push(`Your fellow Grinches are <strong>${escapeHtml(allies)}</strong>.`);
     if (d.witnessGrinchName) notes.push(`You saw <strong>${escapeHtml(d.witnessGrinchName)}</strong>. Hint only.`);
+    if (d.privateNotice) notes.push(escapeHtml(d.privateNotice));
+    if (d.krampusNotice) notes.push(escapeHtml(d.krampusNotice));
     if (d.detectiveResult) {
       const check = d.detectiveResult;
       notes.push(`Last check: <strong>${escapeHtml(check.targetName)}</strong> · ${check.isBad ? "Yes" : "No"}`);
@@ -1118,7 +1132,8 @@
     const supportsTurnPanel = !privateNight && turn.actions?.length && supportsDialog;
     return `<article class="role-card game-role-card player-card" data-card-family="${family}">
       ${privateNight ? playerNightHtml(d, turn) : ""}
-      ${roleCardContents(role, { title, rows, note, goal, phase, out: d.you.alive === false })}
+      ${roleCardContents(role, { title, rows, note, goal, phase, out: d.you.alive === false, lives: d.you.lives, livesMax: d.you.livesMax })}
+      ${isFirstMorning(d) ? `<p class="player-card-morning-note">${escapeHtml(firstMorningNote())}</p>` : ""}
       ${playerPrivateNotes(d, ghost)}
       ${d.krampusWon && d.you.role === "krampus" ? '<p class="player-card-private" role="status"><strong>You earned your Krampus win.</strong></p>' : ""}
       ${supportsTurnPanel ? `
@@ -1225,9 +1240,10 @@
         return;
       }
       const sig = JSON.stringify([
-        d.phase, d.nightNumber, d.dayNumber, d.reveal?.mode, d.winnerText, d.ghostsBonus, d.krampusWon, d.locked,
+        d.phase, d.nightNumber, d.dayNumber, d.reveal?.mode, d.winnerText, d.krampusWon, d.locked,
         d.pendingGingerbread, d.you, d.living, d.dead, d.submitted,
-        d.detectiveResult, d.fellowGrinches, d.witnessGrinchName, d.townHallEndsAt, d.ghostClue, d.ghostShot
+        d.detectiveResult, d.fellowGrinches, d.witnessGrinchName, d.townHallEndsAt, d.ghostClue, d.ghostShot,
+        d.privateNotice, d.krampusNotice
       ]);
       if (!force && sig === lastSig) return;
       lastSig = sig;
@@ -1343,8 +1359,9 @@
       sub: d.submittedCount, exp: d.expectedCount, deal: d.dealt, tw: d.availableTwists, w: d.winnerSide,
       nightSubmissions: d.phase === "night" ? d.submitted?.map(({ id }) => id) : null,
       lobby: d.lobby, krampusWon: d.krampusWon, townHallEndsAt: d.townHallEndsAt,
-      canStartTownHall: d.canStartTownHall, canAdvance: d.canAdvance,
+      canStartTownHall: d.canStartTownHall, canAdvance: d.canAdvance, canCloseTurn: d.canCloseTurn,
       canPlayNightBlizzard: d.canPlayNightBlizzard, nightBlizzardActive: d.nightBlizzardActive,
+      rehearsal: d.rehearsal, waitingNames: d.waitingNames, waitingGhostNames: d.waitingGhostNames,
       preview: d.tvPreview && [displaySignature(d.tvPreview.currentTv), displaySignature(d.tvPreview.tv, { upcoming: true }),
         d.tvPreview.nextAction, d.tvPreview.nextScreen],
       roles: d.roles?.map(({ id, role, roleName, display_name, alive }) => [id, role, roleName, display_name, alive])
@@ -1417,7 +1434,7 @@
       ${!ready ? `<p>At least ${minPlayers} players must join before you can shuffle.</p>` : ""}
       <div class="game-host-lobby-actions">
         ${d.canStart ? '<button type="button" class="btn btn-gold" id="host-start">Start Night 1</button>' : ""}
-        <button type="button" class="btn ${d.canStart ? "game-host-secondary" : "btn-gold"}" id="host-shuffle"${ready ? "" : " disabled"}${d.canReshuffle ? ' aria-label="Shuffle again" title="Shuffle again"' : ""}>${d.canReshuffle ? '<span aria-hidden="true">↻</span>' : "Shuffle roles"}</button>
+        <button type="button" class="btn ${d.canReshuffle ? "game-host-secondary" : "btn-gold"}" id="host-shuffle"${ready ? "" : " disabled"}>${d.canReshuffle ? "Shuffle again" : "Shuffle roles"}</button>
       </div>
       <p class="form-status" id="game-status" role="status" hidden></p>
     </div>`;
@@ -1449,12 +1466,13 @@
 
   function hostNightChecklist(d, roles) {
     const submitted = new Set((d.submitted || []).map(({ id }) => id));
-    return `<ul class="game-host-night-checklist" role="list">${roles.filter(({ alive }) => alive).map(({ id, role, roleName, display_name }) => {
+    return `<ul class="game-host-night-checklist" role="list">${roles.map(({ id, role, roleName, display_name, alive }) => {
       const complete = submitted.has(id);
-      const meta = ROLE_META[role] || {};
+      const meta = ROLE_META[alive === false ? "ghost" : role] || ROLE_META[role] || {};
+      const label = alive === false ? "Ghost" : (roleName || meta.name || "Role");
       return `<li class="game-host-night-seat">
         ${rolePortrait(meta, "game-host-night-portrait", "lazy")}
-        <span class="game-host-night-name"><strong>${escapeHtml(display_name)}</strong><span>${escapeHtml(roleName || meta.name || "Role")}</span></span>
+        <span class="game-host-night-name"><strong>${escapeHtml(display_name)}</strong><span>${escapeHtml(label)}</span></span>
         <span class="game-host-night-status${complete ? " is-ready" : ""}" aria-hidden="true">${complete ? "✓" : "○"}</span>
         <span class="visually-hidden">${complete ? "Locked in" : "Waiting"}</span>
       </li>`;
@@ -1464,7 +1482,7 @@
   const HOST_TURNS = {
     night: {
       title: "Night actions",
-      instruction: "Everyone still in makes their move on their phone together.",
+      instruction: "Everyone still in, and any ghosts, should lock in on their phones. You can close the night anyway if someone is stuck.",
       action: "Next"
     },
     day: {
@@ -1577,6 +1595,25 @@
     </section>`;
   }
 
+  function hostWaitingHtml(d) {
+    const waiting = d.waitingNames || [];
+    if (!waiting.length) return "";
+    return `<p class="game-host-waiting">Still waiting on ${waiting.map((name) => escapeHtml(name)).join(", ")}.</p>`;
+  }
+
+  function hostToolsHtml(d) {
+    return `<section class="card game-host-tools">
+      ${d.rehearsal
+        ? `<p class="game-host-rehearsal">Rehearsal is on. Test elves sign in with PIN <strong>${escapeHtml(d.rehearsalPin || "")}</strong>.</p>`
+        : "<p>Party lobby. Open rehearsal only when you want a practice round.</p>"}
+      <div class="game-host-lobby-actions">
+        ${d.canOpenRehearsal ? '<button type="button" class="btn game-host-secondary" id="host-open-rehearsal">Open rehearsal</button>' : ""}
+        ${d.canOpenParty ? '<button type="button" class="btn game-host-secondary" id="host-open-party">Open party lobby</button>' : ""}
+        <button type="button" class="btn game-host-secondary" id="host-clear-lockouts">Clear PIN lockouts</button>
+      </div>
+    </section>`;
+  }
+
   function paintHost(root, d) {
     const previousRoles = $(".game-host-roles", root);
     if (previousRoles) hostRolesOpen = previousRoles.open;
@@ -1592,7 +1629,6 @@
         <h3>Game over</h3>
         ${d.winnerText ? `<p>${escapeHtml(d.winnerText)}</p>` : ""}
         ${d.krampusWon && d.winnerSide !== "krampus" ? `<p>${KRAMPUS_WIN}</p>` : ""}
-        ${d.ghostsBonus ? "<p>The ghosts earned a gachapon spin.</p>" : ""}
         <button class="btn btn-gold" id="host-new-lobby" type="button">Open a new lobby</button>
         ${HOST_STATUS}
       </section>`;
@@ -1618,10 +1654,11 @@
         <h3>${turn.title}</h3>
         <p>${turn.instruction}</p>
         <p role="status"><strong>${d.submittedCount || 0} / ${d.expectedCount || 0}</strong> locked in</p>
-        ${d.phase === "night" ? hostNightChecklist(d, roles) + hostNightPowersHtml(d) : ""}
+        ${d.phase === "night" ? hostNightChecklist(d, roles) + hostNightPowersHtml(d) : hostWaitingHtml(d)}
         <button type="button" class="btn btn-gold" id="host-advance"${
           d.canAdvance === false || (["night", "day"].includes(d.phase) && d.submittedCount < d.expectedCount) ? " disabled" : ""
         }>${turn.action}</button>
+        ${d.canCloseTurn && d.canAdvance === false ? `<button type="button" class="btn game-host-secondary" id="host-close-turn">${d.phase === "night" ? "Close night anyway" : "Close vote anyway"}</button>` : ""}
         ${HOST_STATUS}
       </section>`;
     }
@@ -1632,19 +1669,42 @@
         <p class="kicker">Host · ${escapeHtml(d.hostName || "")}</p>
         <h1 class="outline-red">Who Stole Christmas?</h1>
         <p class="game-phase-tag">${escapeHtml(hostPhaseLabel(d))}</p>
+        ${isFirstMorning(d) ? `<p class="game-host-morning-note">${escapeHtml(firstMorningNote())}</p>` : ""}
         <a class="btn btn-ghost game-host-tv-link" href="tv.html" target="_blank" rel="noopener">Open the TV screen</a>
       </header>
+      ${hostToolsHtml(d)}
       ${hostTvPreviewHtml(d.tvPreview)}
       ${mid}
       <p class="logout-line"><a href="host.html" id="host-logout">Sign out</a></p>
     `;
 
-    bindHostSetup(root, "#host-shuffle", () => a.gameHostDealLobby(ht), "Couldn’t shuffle. Try again.");
+    bindHostSetup(root, "#host-shuffle", () => a.gameHostDealLobby(ht), "Couldn’t shuffle. Try again.", {
+      confirmation: d.canReshuffle ? "Shuffle again? This will replace everyone’s card." : ""
+    });
     bindHostSetup(root, "#host-start", () => a.gameHostStart(ht), "Couldn’t start Night 1. Try again.");
-    bindHostSetup(root, "#host-new-lobby", () => a.gameHostReset(ht), "Couldn’t open a new lobby. Try again.");
+    bindHostSetup(root, "#host-new-lobby", () => a.gameHostReset(ht), "Couldn’t open a new lobby. Try again.", {
+      confirmation: "Open a new lobby? This ends the current game."
+    });
     bindHostSetup(root, "#host-advance", () => a.gameHostAdvance(ht), "Couldn’t continue. Try again.");
+    bindHostSetup(root, "#host-close-turn", () => a.gameHostCloseTurn(ht), "Couldn’t close the turn. Try again.", {
+      confirmation: d.phase === "night"
+        ? "Close the night anyway? Anyone who has not locked in will check in, and missing ghost actions will be skipped."
+        : "Close the vote anyway? Anyone who has not voted will not cast a ballot."
+    });
+    bindHostSetup(root, "#host-open-rehearsal", () => a.gameHostOpenRehearsal(ht), "Couldn’t open rehearsal. Try again.", {
+      confirmation: "Start rehearsal? This opens a test lobby with 13 QA elves and ends the current game."
+    });
+    bindHostSetup(root, "#host-open-party", () => a.gameHostOpenParty(ht), "Couldn’t open the party lobby. Try again.", {
+      confirmation: "End rehearsal and open the party lobby? Test elves will leave the table."
+    });
+    bindHostSetup(root, "#host-clear-lockouts", () => a.gameHostClearPinLockouts(ht), "Couldn’t clear PIN lockouts. Try again.", {
+      confirmation: "Clear PIN lockouts? Anyone who was locked out can try again now."
+    });
     bindHostSetup(root, "#host-night-blizzard", () => a.gameHostPlayTwist(ht, "blizzard"),
-      "Couldn’t play Blizzard. Try again.", { useSnapshot: true });
+      "Couldn’t play Blizzard. Try again.", {
+        useSnapshot: true,
+        confirmation: "Play Blizzard? This stops tonight’s attacks and saves."
+      });
     townHallClock(root, d, () => refreshHost(root, true));
     bindHostSetup(root, "#host-town-hall-start", () => a.gameHostStartTownHall(ht),
       "Couldn’t start the timer. Try again.", { useSnapshot: true });
@@ -1665,7 +1725,7 @@
     const lo = $("#host-logout", root);
     lo?.addEventListener("click", (event) => {
       event.preventDefault();
-      if (!global.confirm("Sign out of the host screen?")) return;
+      if (!global.confirm("Sign out of the host screen? The game keeps going. Sign back in with your PIN.")) return;
       setHostToken("");
       renderHost(root);
     });

@@ -66,7 +66,11 @@
     gameHostAdvance: (hostToken) => current().gameHostAdvance(hostToken),
     gameHostReset: (hostToken) => current().gameHostReset(hostToken),
     gameHostPlayTwist: (hostToken, card, target, target2) => current().gameHostPlayTwist(hostToken, card, target, target2),
-    gameHostSkipTwist: (hostToken) => current().gameHostSkipTwist(hostToken)
+    gameHostSkipTwist: (hostToken) => current().gameHostSkipTwist(hostToken),
+    gameHostCloseTurn: (hostToken) => current().gameHostCloseTurn(hostToken),
+    gameHostClearPinLockouts: (hostToken) => current().gameHostClearPinLockouts(hostToken),
+    gameHostOpenRehearsal: (hostToken) => current().gameHostOpenRehearsal(hostToken),
+    gameHostOpenParty: (hostToken) => current().gameHostOpenParty(hostToken)
   };
 
   global.InviteData = api;

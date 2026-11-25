@@ -473,7 +473,11 @@
     gameHostAdvance() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
     gameHostReset() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
     gameHostPlayTwist() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
-    gameHostSkipTwist() { return Promise.resolve({ ok: false, reason: "forbidden" }); }
+    gameHostSkipTwist() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
+    gameHostCloseTurn() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
+    gameHostClearPinLockouts() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
+    gameHostOpenRehearsal() { return Promise.resolve({ ok: false, reason: "forbidden" }); },
+    gameHostOpenParty() { return Promise.resolve({ ok: false, reason: "forbidden" }); }
   };
   if (global.InviteData) {
     global.InviteData.register("mock", adapter);

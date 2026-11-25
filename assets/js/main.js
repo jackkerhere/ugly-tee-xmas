@@ -15,7 +15,7 @@
   const STORE_PIN_LOCK = "uglytee-pin-lock-until";
   const STORE_ME_TAB = "uglytee-me-subtab";
   const PIN_MAX_TRIES = 5;
-  const PIN_LOCK_MS = 60 * 1000;
+  const PIN_LOCK_MS = 90 * 1000;
 
   function currentToken() {
     const fromUrl = (new URLSearchParams(location.search).get("k") || "").trim();
@@ -515,6 +515,17 @@
     } catch (_) { /* ignore */ }
   }
 
+  function applyServerPinLock(res) {
+    if (!res || res.reason !== "locked") return;
+    let until = Date.now() + PIN_LOCK_MS;
+    if (res.lockedUntil) {
+      const parsed = Date.parse(res.lockedUntil);
+      if (!Number.isNaN(parsed)) until = parsed;
+    }
+    try { sessionStorage.setItem(STORE_PIN_LOCK, String(until)); }
+    catch (_) { /* ignore */ }
+  }
+
   function pinBoxesHtml() {
     return Array.from({ length: 6 }, (_, i) =>
       `<input class="pin-digit" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="${i === 0 ? "one-time-code" : "off"}" aria-label="PIN digit ${i + 1}" data-index="${i}">`
@@ -684,8 +695,7 @@
           return;
         }
         const secs = Math.ceil(left / 1000);
-        setError("A few too many tries. Please wait " + secs + " second" + (secs === 1 ? "" : "s") + " and try again.");
-        inputs.forEach((el) => { el.disabled = true; });
+        setError("Too many tries. Please wait " + secs + " second" + (secs === 1 ? "" : "s") + ", or ask the host to clear the lockout.");
         setTimeout(tick, 250);
       };
       tick();
@@ -708,7 +718,6 @@
     function trySubmit() {
       if (submitting) return;
       const pin = digits();
-      if (opts && opts.checkLock && pinLockRemaining() > 0) { showLockout(); return; }
       if (pin.length !== 6) {
         setError("Please enter all six digits.");
         return;
@@ -789,10 +798,15 @@
           startGuestSession(res.token);
           return;
         }
-        recordPinFailure();
         const inputs = $all(".pin-digit", root);
         inputs.forEach((el) => { el.value = ""; });
-        if (pinLockRemaining() > 0) return;
+        if (res && res.reason === "locked") {
+          applyServerPinLock(res);
+          setError((res && res.message) || "Too many tries. Please wait a minute, or ask the host to clear the lockout.");
+          if (inputs[0]) inputs[0].focus();
+          return;
+        }
+        recordPinFailure();
         setError((res && res.message) || "That PIN didn’t work. Please try again.");
         if (inputs[0]) inputs[0].focus();
       })

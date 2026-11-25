@@ -181,7 +181,11 @@
         target2: target2 || null
       });
     },
-    gameHostSkipTwist(hostToken) { return rpc("game_host_skip_twist", { host_token: String(hostToken || "").trim() }); }
+    gameHostSkipTwist(hostToken) { return rpc("game_host_skip_twist", { host_token: String(hostToken || "").trim() }); },
+    gameHostCloseTurn(hostToken) { return rpc("game_host_close_turn", { host_token: String(hostToken || "").trim() }); },
+    gameHostClearPinLockouts(hostToken) { return rpc("game_host_clear_pin_lockouts", { host_token: String(hostToken || "").trim() }); },
+    gameHostOpenRehearsal(hostToken) { return rpc("game_host_open_rehearsal", { host_token: String(hostToken || "").trim() }); },
+    gameHostOpenParty(hostToken) { return rpc("game_host_open_party", { host_token: String(hostToken || "").trim() }); }
   };
 
   if (global.InviteData) {

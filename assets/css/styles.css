@@ -1413,6 +1413,45 @@ html.is-shot *, html.is-shot *::before, html.is-shot *::after {
   max-width: 32rem;
   margin: 0 auto 1.15rem;
 }
+.game-host-login {
+  max-width: 28rem;
+}
+.game-host-login form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+.game-host-login label {
+  display: block;
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--navy);
+}
+.game-host-login #host-pin {
+  width: 100%;
+  max-width: 16rem;
+  box-sizing: border-box;
+  padding: 0.7rem 0.85rem;
+  font-size: 1.35rem;
+  letter-spacing: 0.28em;
+}
+.game-host-login button[type="submit"] {
+  width: 100%;
+  max-width: 16rem;
+}
+.game-host-tools {
+  max-width: 40rem;
+  margin: 0 auto 1rem;
+}
+.game-host-rehearsal, .game-host-morning-note, .player-card-morning-note, .game-host-waiting {
+  margin: 0.4rem 0 0;
+}
+.player-card-morning-note, .game-host-morning-note {
+  font-size: 0.95rem;
+}
 .game-wait-emoji { font-size: 3rem; margin: 0 0 0.35rem; line-height: 1; }
 .game-lobby h2, .game-lobby h3 { margin: 0 0 0.6rem; }
 .game-lobby p { margin-bottom: 0.6rem; }
@@ -2054,6 +2093,12 @@ body:has(.guide-character-dialog[open]) { overflow: hidden; }
   border: 0;
   background: none;
   box-shadow: none;
+}
+.game-home .game-wait:has(#game-sign-in) h2 {
+  color: var(--cream);
+  margin: 0 0 0.8rem;
+  padding-inline: var(--game-home-action-inset);
+  text-shadow: 0 1px 0 rgba(8, 20, 48, 0.45);
 }
 #game-sign-in {
   display: flex;
